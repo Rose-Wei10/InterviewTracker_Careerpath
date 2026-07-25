@@ -1,76 +1,68 @@
-import prisma from "../config/prisma"
+import prisma from "../config/prisma";
+import { getAuth } from "@clerk/express";
 
-export const getDashboardStats = async (
-req,
-res
-)=>{
+export const getDashboardStats = async (req: any, res: any) => {
 
-const applications=
+    const { userId } = getAuth(req);
 
-    await prisma.jobApplication.findMany()
+    if (!userId) {
+        return res.status(401).json({
+            message: "Unauthorized",
+        });
+    }
 
-const stats={
+    const applications =
+        await prisma.jobApplication.findMany({
 
-    applied:
+            where: {
+                userId,
+            },
 
-    applications.filter(
+            orderBy: {
+                appliedDate: "desc",
+            },
 
-    a=>a.status==="Applied"
+        });
 
-    ).length,
+    const stats = {
 
-    oa:
+        applied:
+            applications.filter(a => a.status === "Applied").length,
 
-    applications.filter(
+        oa:
+            applications.filter(a => a.status === "OA").length,
 
-    a=>a.status==="OA"
+        interview:
+            applications.filter(a => a.status === "Interview").length,
 
-    ).length,
+        offer:
+            applications.filter(a => a.status === "Offer").length,
 
-    interview:
+        rejected:
+            applications.filter(a => a.status === "Reject").length,
 
-    applications.filter(
+        ghosted:
+            applications.filter(a => a.status === "Ghosted").length,
 
-    a=>a.status==="Interview"
+    };
 
-    ).length,
+    res.json({
 
-    offer:
+        stats,
 
-    applications.filter(
+        recent:
+            applications
+                .sort(
+                    (a,b)=>
+                    b.createdAt.getTime()-
+                    a.createdAt.getTime()
+                )
+                .slice(0,5),
 
-    a=>a.status==="Offer"
+        upcoming: [],
 
-    ).length,
+        chartData: [],
 
-    rejected:
+    });
 
-    applications.filter(
-
-    a=>a.status==="Reject"
-
-    ).length,
-
-    ghosted:
-
-    applications.filter(
-
-    a=>a.status==="Ghosted"
-
-    ).length
-
-}
-
-res.json({
-
-    stats,
-
-    recent:applications,
-
-    upcoming:[],
-
-    chartData:[]
-
-    })
-
-}
+};

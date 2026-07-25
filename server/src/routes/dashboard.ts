@@ -13,4 +13,4 @@ router.get(
     getDashboardStats
 )
 
-export default router
+export default router;
