@@ -1,4 +1,5 @@
 import "./DashboardHeader.css"
+import { UserButton } from "@clerk/clerk-react";
 
 export default function DashboardHeader(){
 
@@ -20,11 +21,11 @@ Track applications and interviews
 
 <div className="header-right">
 
-<input
+{/* <input
 placeholder="Search company..."
 className="search"
-/>
-
+/> */}
+<UserButton afterSignOutUrl="/" />
 </div>
 
 </div>

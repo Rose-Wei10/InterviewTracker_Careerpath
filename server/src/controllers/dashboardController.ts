@@ -1,33 +1,76 @@
-import { Request, Response } from "express"
+import prisma from "../config/prisma"
 
 export const getDashboardStats = async (
-    req: Request,
-    res: Response
-) => {
+req,
+res
+)=>{
 
-    res.json({
+const applications=
 
-        stats:{
-            applied:32,
-            interview:11,
-            offer:2,
-            rejected:8
-        },
+    await prisma.jobApplication.findMany()
 
-        chartData:[
-            {
-                month:"Jan",
-                count:5
-            },
-            {
-                month:"Feb",
-                count:8
-            }
-        ],
+const stats={
 
-        upcoming:[],
+    applied:
 
-        recent:[]
+    applications.filter(
+
+    a=>a.status==="Applied"
+
+    ).length,
+
+    oa:
+
+    applications.filter(
+
+    a=>a.status==="OA"
+
+    ).length,
+
+    interview:
+
+    applications.filter(
+
+    a=>a.status==="Interview"
+
+    ).length,
+
+    offer:
+
+    applications.filter(
+
+    a=>a.status==="Offer"
+
+    ).length,
+
+    rejected:
+
+    applications.filter(
+
+    a=>a.status==="Reject"
+
+    ).length,
+
+    ghosted:
+
+    applications.filter(
+
+    a=>a.status==="Ghosted"
+
+    ).length
+
+}
+
+res.json({
+
+    stats,
+
+    recent:applications,
+
+    upcoming:[],
+
+    chartData:[]
+
     })
 
 }

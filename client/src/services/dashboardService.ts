@@ -6,7 +6,7 @@ export const getDashboard=async()=>{
 
 const res=
 await axios.get(
-"http://localhost:5000/api/dashboard"
+"http://localhost:5001/api/dashboard"
 )
 
 return res.data
