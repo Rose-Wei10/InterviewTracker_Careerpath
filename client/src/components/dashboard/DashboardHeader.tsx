@@ -1,35 +1,30 @@
-import "./DashboardHeader.css"
-import { UserButton } from "@clerk/clerk-react";
+import "./DashboardHeader.css";
+import { UserButton, useUser } from "@clerk/clerk-react";
 
-export default function DashboardHeader(){
+export default function DashboardHeader() {
+  const { user } = useUser();
 
-return(
+  const displayName =
+    user?.username ||
+    user?.firstName ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "User";
 
-<div className="dashboard-header">
+  return (
+    <div className="dashboard-header">
+      <div>
+        <h1>
+          Welcome back, {displayName} 👋
+        </h1>
 
-<div>
+        <p>
+          Track applications and interviews
+        </p>
+      </div>
 
-<h1>
-Welcome back, Rose 👋
-</h1>
-
-<p>
-Track applications and interviews
-</p>
-
-</div>
-
-<div className="header-right">
-
-{/* <input
-placeholder="Search company..."
-className="search"
-/> */}
-<UserButton afterSignOutUrl="/" />
-</div>
-
-</div>
-
-)
-
+      <div className="header-right">
+        <UserButton afterSignOutUrl="/" />
+      </div>
+    </div>
+  );
 }

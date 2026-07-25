@@ -1,17 +1,20 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
     createApplication,
+    updateApplication,
     type JobApplication
 } from "../../services/applicationService"
 
 interface Props {
     open: boolean
+    application?: JobApplication | null
     onClose: () => void
     onSuccess: () => void
 }
 
 export default function AddApplicationModal({
     open,
+    application,
     onClose,
     onSuccess
 }: Props) {
@@ -29,7 +32,6 @@ export default function AddApplicationModal({
         notes: ""
     });
 
-    if(!open) return null
 
     const handleChange = (
 
@@ -46,52 +48,117 @@ export default function AddApplicationModal({
         })
 
     }
+    useEffect(() => {
 
-    const handleSubmit = async()=>{
+    if (application) {
 
-        if(form.company==="" || form.role===""){
+        setForm({
 
-            alert("Company and Role are required.")
+            company: application.company,
 
-            return
+            role: application.role,
 
-        }
+            location: application.location ?? "",
 
-        try{
+            salary: application.salary ?? "",
 
-            setLoading(true)
+            appliedDate:
+                application.appliedDate
+                    ? application.appliedDate.slice(0, 10)
+                    : new Date().toISOString().slice(0, 10),
 
-            await createApplication(form)
+            status: application.status,
 
-            await onSuccess?.();
+            jobLink: application.jobLink ?? "",
 
-            onClose()
+            notes: application.notes ?? "",
 
-        }
+        })
 
-        catch(err){
+    } else {
 
-            console.log(err)
+        setForm({
 
-            alert("Unable to save.")
+            company: "",
 
-        }
+            role: "",
 
-        finally{
+            location: "",
 
-            setLoading(false)
+            salary: "",
 
-        }
+            appliedDate: new Date().toISOString().slice(0,10),
+
+            status: "Applied",
+
+            jobLink: "",
+
+            notes: "",
+
+        })
 
     }
 
+}, [application, open])
+
+const handleSubmit = async () => {
+    const payload = {
+        ...form,
+        appliedDate: new Date(form.appliedDate).toISOString(),
+    };
+
+    if (!form.company || !form.role) {
+
+        alert("Company and Role are required.");
+
+        return;
+
+    }
+
+    try {
+
+        setLoading(true);
+
+        if (application) {
+
+            await updateApplication(
+                application.id!,
+                payload
+            );
+
+        } else {
+
+            await createApplication(payload);
+
+        }
+
+        await onSuccess();
+
+        onClose();
+
+    } catch (err) {
+
+        console.error(err);
+
+        alert("Unable to save.");
+
+    } finally {
+
+        setLoading(false);
+
+    }
+
+};
+if (!open) return null;
     return(
 
 <div className="modal-overlay">
 
 <div className="application-modal">
 
-<h2>Add Application</h2>
+<h2>
+    {application ? "Edit Application" : "Add Application"}
+</h2>
 
 <div className="form-grid">
 
@@ -248,12 +315,10 @@ onChange={handleChange}
 <div className="modal-buttons">
 
 <button
-
-className="cancel-btn"
-
-onClick={onClose}
-
->
+    type="button"
+    className="cancel-btn"
+    onClick={onClose}
+    >
 
 Cancel
 
@@ -270,15 +335,13 @@ disabled={loading}
 >
 
 {
-
-loading?
-
+loading
+?
 "Saving..."
-
 :
-
-"Save Application"
-
+application
+    ? "Update Application"
+    : "Save Application"
 }
 
 </button>

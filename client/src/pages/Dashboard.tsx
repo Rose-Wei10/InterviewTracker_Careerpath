@@ -33,23 +33,26 @@ export default function Dashboard(){
 
     // },[])
     const { getToken } = useAuth();
-    const [showAddModal, setShowAddModal] = useState(false)
-
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [editingApplication, setEditingApplication] =
+        useState<JobApplication | null>(null);
+    const [selectedApplication, setSelectedApplication] =
+        useState<JobApplication | null>(null);
     const [applications, setApplications] =
-        useState<JobApplication[]>([])
+        useState<JobApplication[]>([]);
 
     const load = async () => {
-    try {
-        console.log("Calling getDashboard...");
+        try {
+            console.log("Calling getDashboard...");
 
-        const res = await getDashboard();
+            const token = await getToken();
 
-        console.log("Dashboard response:", res);
+            const data = await getDashboard(token!);
 
-        setData(res);
-    } catch (err) {
-        console.error("Dashboard error:", err);
-    }
+            setData(data);
+        } catch (err) {
+            console.error("Dashboard error:", err);
+        }
     };
 
 
@@ -63,29 +66,29 @@ export default function Dashboard(){
         }
     };
 
-    useEffect(() => {
-    async function initialize() {
-        console.log("1. Getting token");
+    // useEffect(() => {
+    // async function initialize() {
+    //     console.log("1. Getting token");
 
-        const token = await getToken();
+    //     const token = await getToken();
 
-        console.log("2. Token:", token);
+    //     console.log("2. Token:", token);
 
-        setAuthToken(token);
+    //     setAuthToken(token);
 
-        console.log("3. Loading applications");
+    //     console.log("3. Loading applications");
 
-        await loadApplications();
+    //     await loadApplications();
 
-        console.log("4. Loading dashboard");
+    //     console.log("4. Loading dashboard");
 
-        await load();
+    //     await load();
 
-        console.log("5. Finished");
-    }
+    //     console.log("5. Finished");
+    // }
 
-    initialize();
-    }, []);
+    // initialize();
+    // }, []);
     
 
     // useEffect(() => {
@@ -122,34 +125,22 @@ export default function Dashboard(){
     }
 
     const handleStatusChange = async (
-
         id: string,
-
         status: string
-
         ) => {
+        await updateStatus(id, status as JobApplication["status"]);
 
-            await updateStatus(id, status as JobApplication["status"])
-
-            loadApplications()
-
+        await loadApplications();
+        await load();
     }
 
-    // const handleEdit = (
-
-    //     application: JobApplication
-
-    //     ) => {
-
-    //         setSelectedApplication(application)
-    //         setEditModalOpen(true)
-
-    // }
     const handleEdit = (
         application: JobApplication
-        ) => {
+    ) => {
 
-            console.log("Edit:", application)
+        setSelectedApplication(application);
+
+        setShowAddModal(true);
 
     }
 
@@ -186,7 +177,10 @@ export default function Dashboard(){
                 onDelete={handleDelete}
                 onEdit={handleEdit}
                 onStatusChange={handleStatusChange}
-                onAdd={() => setShowAddModal(true)}
+                onAdd={() => {
+                    setSelectedApplication(null);
+                    setShowAddModal(true);
+                }}
             />
 
         <div className="dashboard-grid">
@@ -213,13 +207,16 @@ export default function Dashboard(){
 
         </div>
             <AddApplicationModal
-
                 open={showAddModal}
+                application={selectedApplication}
+                onClose={() => setShowAddModal(false)}
+                onSuccess={async () => {
 
-                onClose={()=>setShowAddModal(false)}
+                    await loadApplications();
 
-                onSuccess={loadApplications}
+                    await load();
 
+                }}
             />
         </div>
 
