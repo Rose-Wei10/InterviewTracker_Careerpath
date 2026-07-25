@@ -1,74 +1,280 @@
-# React + TypeScript + Vite
+# Interview Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack web application that helps job seekers organize and track their internship and job applications throughout the recruiting process.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Authentication
+- Secure user authentication using Clerk
+- Each user has their own private application data
+- Protected dashboard routes
 
-## React Compiler
+### Dashboard
+- View application statistics
+- Track application progress
+- Status summary cards
+- Recent application overview
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Job Application Management
+- Add new applications
+- Edit existing applications
+- Delete applications
+- Update application status
+- Store:
+  - Company
+  - Job Title
+  - Location
+  - Salary
+  - Applied Date
+  - Job Link
+  - Notes
 
-## Expanding the ESLint configuration
+### Application Status
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Supported statuses:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Applied
+- Online Assessment (OA)
+- Interview
+- Final Round
+- Offer
+- Reject
+- Ghosted
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Database
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Data is stored using Prisma ORM with PostgreSQL.
+
+Each application belongs to a specific authenticated user.
+
+---
+
+# Tech Stack
+
+## Frontend
+
+- React
+- TypeScript
+- Vite
+- React Router
+- Axios
+- CSS
+
+## Backend
+
+- Node.js
+- Express.js
+- TypeScript
+- Prisma ORM
+- PostgreSQL
+
+## Authentication
+
+- Clerk Authentication
+
+---
+
+# Project Structure
+
+```
+InterviewTracker
+│
+├── client/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── hooks/
+│   │   └── types/
+│   └── package.json
+│
+├── server/
+│   ├── prisma/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   ├── config/
+│   │   └── index.ts
+│   └── package.json
+│
+└── README.md
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+# Getting Started
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Prerequisites
+
+- Node.js
+- PostgreSQL
+- npm
+- Clerk Account
+
+---
+
+## Clone Repository
+
+```bash
+git clone https://github.com/yourusername/interview-tracker.git
+
+cd interview-tracker
 ```
-# Inteview-Tracker
+
+---
+
+# Backend Setup
+
+Navigate to the server folder.
+
+```bash
+cd server
+```
+
+Install dependencies.
+
+```bash
+npm install
+```
+
+Create a `.env` file.
+
+Example:
+
+```env
+DATABASE_URL="postgresql://username:password@localhost:5432/interview_tracker"
+
+CLERK_SECRET_KEY=your_clerk_secret_key
+```
+
+Generate Prisma Client.
+
+```bash
+npx prisma generate
+```
+
+Run database migration.
+
+```bash
+npx prisma migrate dev
+```
+
+Start backend server.
+
+```bash
+npm run dev
+```
+
+Server runs at:
+
+```
+http://localhost:5001
+```
+
+---
+
+# Frontend Setup
+
+Navigate to the client folder.
+
+```bash
+cd client
+```
+
+Install dependencies.
+
+```bash
+npm install
+```
+
+Create `.env`
+
+```env
+VITE_CLERK_PUBLISHABLE_KEY=your_publishable_key
+
+VITE_API_URL=http://localhost:5001/api
+```
+
+Start development server.
+
+```bash
+npm run dev
+```
+
+Frontend runs at:
+
+```
+http://localhost:5173
+```
+
+---
+
+# API Endpoints
+
+## Applications
+
+| Method | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/applications` | Get all user applications |
+| POST | `/api/applications` | Create application |
+| PUT | `/api/applications/:id` | Update application |
+| DELETE | `/api/applications/:id` | Delete application |
+
+## Dashboard
+
+| Method | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/api/dashboard/stats` | Get dashboard statistics |
+
+---
+
+# Current Progress
+
+- ✅ Clerk Authentication
+- ✅ Protected Routes
+- ✅ PostgreSQL Database
+- ✅ Prisma ORM
+- ✅ CRUD Operations
+- ✅ Dashboard Statistics
+- ✅ Application Status Tracking
+- ✅ User-specific Data Storage
+- ✅ REST API
+- 🚧 Dashboard Charts (In Progress)
+- 🚧 CSS/UI Improvements
+- 🚧 Responsive Design
+- 🚧 Search & Filter
+- 🚧 Resume Upload
+- 🚧 Email Reminder Feature
+
+---
+
+# Future Improvements
+
+- Dashboard charts
+- Search and filter applications
+- Sort by date or status
+- Resume management
+- Interview calendar
+- Email reminders
+- Export applications as CSV
+- Dark mode
+- Mobile responsive layout
+
+---
+
+# Screenshots
+
+> Screenshots will be added after the UI is finalized.
+
+---
+
+# License
+
+This project is for educational purposes and personal portfolio use.
+
+---
+
+# Author
+
+Developed by **Rose Wei**
