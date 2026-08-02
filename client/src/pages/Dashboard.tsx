@@ -16,6 +16,7 @@ import {
     updateStatus,
 }
 from "../services/applicationService"
+import { Link, useNavigate } from "react-router-dom";
 import { UserButton } from "@clerk/clerk-react";
 import AddApplicationModal from "../components/dashboard/AddApplicationModal"
 import { useAuth } from "@clerk/clerk-react";
@@ -33,6 +34,7 @@ export default function Dashboard(){
 
     // },[])
     const { getToken } = useAuth();
+    const navigate = useNavigate();
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingApplication, setEditingApplication] =
         useState<JobApplication | null>(null);
@@ -167,6 +169,13 @@ export default function Dashboard(){
         <div className="dashboard">
 
             <DashboardHeader/>
+
+            <Link
+                to="/resumes"
+                className="primary-btn"
+            >
+                📄 Resume Library
+            </Link>
           
             <StatCards
             stats={data.stats}

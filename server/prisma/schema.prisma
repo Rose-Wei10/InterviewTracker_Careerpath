@@ -11,6 +11,7 @@ model User {
   id           String           @id
   email        String?
   applications JobApplication[]
+  resumes      Resume[]
 }
 
 model JobApplication {
@@ -27,4 +28,18 @@ model JobApplication {
   salary      String?
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id])
+}
+
+model Resume {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+
+  fileKey     String
+  fileUrl     String
+
+  createdAt   DateTime @default(now())
+
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

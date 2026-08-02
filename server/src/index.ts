@@ -5,6 +5,7 @@ import { clerkMiddleware } from "@clerk/express";
 
 import applicationRoutes from "./routes/applicationRoutes";
 import dashboardRoutes from "./routes/dashboard";
+import resumeRoutes from "./routes/resumeRoutes";
 
 dotenv.config();
 console.log("PK:", process.env.CLERK_PUBLISHABLE_KEY);
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/applications", applicationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/resumes", resumeRoutes);
 
 const PORT = process.env.PORT || 5000;
 

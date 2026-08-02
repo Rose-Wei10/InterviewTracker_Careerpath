@@ -13,6 +13,7 @@ import {
 
 import Dashboard from "./pages/Dashboard";
 import AuthPage from "./pages/AuthPage";
+import ResumeLibrary from "./pages/ResumeLibrary";
 
 function App() {
   return (
@@ -27,6 +28,21 @@ function App() {
             <>
               <SignedIn>
                 <Dashboard />
+              </SignedIn>
+
+              <SignedOut>
+                <RedirectToSignIn />
+              </SignedOut>
+            </>
+          }
+        />
+
+        <Route
+          path="/resumes"
+          element={
+            <>
+              <SignedIn>
+                <ResumeLibrary />
               </SignedIn>
 
               <SignedOut>

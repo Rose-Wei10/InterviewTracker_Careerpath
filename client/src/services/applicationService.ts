@@ -12,7 +12,19 @@ const api = axios.create({
   baseURL: API,
 });
 
+const uploadApi = axios.create({
+  baseURL: "http://localhost:5001/api/upload",
+});
+
 api.interceptors.request.use((config) => {
+  if (authToken) {
+    config.headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  return config;
+});
+
+uploadApi.interceptors.request.use((config) => {
   if (authToken) {
     config.headers.Authorization = `Bearer ${authToken}`;
   }
@@ -45,6 +57,8 @@ export interface JobApplication {
   jobLink?: string;
 
   notes?: string;
+
+  resumeUrl?: string;
 
   createdAt?: string;
 
@@ -93,6 +107,19 @@ export async function updateStatus(
   const res = await api.put(`/${id}`, {
     status,
   });
+
+  return res.data;
+}
+
+export async function uploadResume(file: File) {
+  const formData = new FormData();
+
+  formData.append("resume", file);
+
+  const res = await uploadApi.post(
+    "/resume",
+    formData
+  );
 
   return res.data;
 }

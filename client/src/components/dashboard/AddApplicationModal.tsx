@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import {
     createApplication,
     updateApplication,
+    uploadResume,
     type JobApplication
 } from "../../services/applicationService"
 
@@ -20,7 +21,7 @@ export default function AddApplicationModal({
 }: Props) {
 
     const [loading, setLoading] = useState(false)
-
+    // const [resumeFile, setResumeFile] = useState<File | null>(null);
     const [form, setForm] = useState<JobApplication>({
         company: "",
         role: "",
@@ -32,6 +33,14 @@ export default function AddApplicationModal({
         notes: ""
     });
 
+
+    // const handleFileChange = (
+    //     e: React.ChangeEvent<HTMLInputElement>
+    // ) => {
+    //     if (e.target.files && e.target.files.length > 0) {
+    //         setResumeFile(e.target.files[0]);
+    //     }
+    // };
 
     const handleChange = (
 
@@ -48,6 +57,7 @@ export default function AddApplicationModal({
         })
 
     }
+
     useEffect(() => {
 
     if (application) {
@@ -291,6 +301,26 @@ onChange={handleChange}
 />
 
 </div>
+
+{/* <div className="full-width">
+
+    <label>Resume (PDF)</label>
+
+    <input
+        type="file"
+        accept=".pdf"
+        onChange={handleFileChange}
+    />
+
+    {resumeFile && (
+        <p style={{ marginTop: "6px", fontSize: "14px" }}>
+            Selected: {resumeFile.name}
+        </p>
+    )}
+
+</div> */}
+
+
 
 <div className="full-width">
 
