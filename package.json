@@ -1,5 +1,45 @@
 {
-  "dependencies": {
-    "axios": "^1.18.1"
+  "name": "interview-tracker",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web 'npm run dev -w server' 'npm run dev -w client'",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "eslint client/src server/src server/tests client/tests e2e",
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "test:e2e": "playwright test",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "db:generate": "npm exec -w server prisma generate",
+    "db:migrate": "npm exec -w server prisma migrate deploy",
+    "test:db": "node scripts/test-db.mjs",
+    "test:full": "node scripts/test-db.mjs --e2e",
+    "format": "prettier --write client/src server/src server/tests client/tests e2e docs README.md"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.56.0",
+    "@testing-library/jest-dom": "^6.9.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.0",
+    "@types/supertest": "^6.0.0",
+    "concurrently": "^9.2.0",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
+    "jsdom": "^27.0.0",
+    "pdf-lib": "^1.17.1",
+    "prettier": "^3.9.10",
+    "supertest": "^7.1.0",
+    "typescript-eslint": "^8.59.2",
+    "vitest": "^4.0.0"
   }
 }

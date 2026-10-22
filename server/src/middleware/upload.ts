@@ -1,7 +1,11 @@
 import multer from "multer";
-
-const storage = multer.memoryStorage();
-
+import { HttpError } from "../lib/errors";
 export const upload = multer({
-    storage
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 4 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype !== "application/pdf")
+      return cb(new HttpError(400, "Only PDF uploads are accepted"));
+    cb(null, true);
+  },
 });
