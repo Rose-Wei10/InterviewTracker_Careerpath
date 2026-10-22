@@ -1,112 +1,82 @@
-import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
-import { Link } from "react-router-dom";
-import DashboardHeader from "../components/dashboard/DashboardHeader";
-import {
-  getResumes,
-  deleteResume,
-  setResumeAuthToken,
-  type Resume,
-} from "../services/resumeService";
-
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import toast from "react-hot-toast";
+import { useApi } from "../hooks/useApi";
+import { errorMessage } from "../services/api";
+import type { Resume } from "../types";
+import { Loading, ErrorState, Empty, Confirm } from "../components/ui";
 import UploadResumeModal from "../components/resume/uploadResumeModal";
 import ResumeCard from "../components/resume/resumeCard";
-import "../styles/resume.css";
-
 export default function ResumeLibrary() {
-    const { getToken } = useAuth();
-
-    const [showModal, setShowModal] = useState(false);
-
-    const [resumes, setResumes] = useState<Resume[]>([]);
-
-    async function loadResumes() {
-        try {
-        const data = await getResumes();
-        setResumes(data);
-        } catch (err) {
-        console.error(err);
-        }
-    }
-
-    useEffect(() => {
-        async function initialize() {
-            const token = await getToken();
-
-            setResumeAuthToken(token);
-
-            await loadResumes();
-        }
-
-        initialize();
-    }, []);
-
-    async function handleDelete(id: string) {
-        if (!confirm("Delete this resume?")) return;
-
-        await deleteResume(id);
-
-        loadResumes();
-    }
-
-    return (
-    <div className="dashboard">
-
-        <DashboardHeader />
-
-        <div className="resume-header">
-
+  const api = useApi(),
+    qc = useQueryClient(),
+    [uploading, setUploading] = useState(false),
+    [deleting, setDeleting] = useState<Resume | null>(null);
+  const query = useQuery({
+    queryKey: ["resumes", api.userId],
+    queryFn: () => api.get<Resume[]>("/resumes"),
+  });
+  const remove = useMutation({
+    mutationFn: (id: string) => api.remove(`/resumes/${id}`),
+    onSuccess: () => {
+      void qc.invalidateQueries();
+      setDeleting(null);
+      toast.success("Resume deleted");
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  return (
+    <>
+      <div className="page-heading">
         <div>
-            <h2>Resume Library</h2>
-
-            <p>
-            Store multiple resumes for different job applications.
-            </p>
+          <p className="eyebrow">PUT YOUR BEST EXPERIENCE FORWARD</p>
+          <h1>
+            Resume library<span className="heading-dot">.</span>
+          </h1>
+          <p>
+            The right version for the right opportunity. Private, organized,
+            ready.
+          </p>
         </div>
-
-        <div className="resume-actions">
-
-            <Link
-            to="/dashboard"
-            className="secondary-btn"
-            >
-            ← Dashboard
-            </Link>
-
-            <button
-            className="primary-btn"
-            onClick={() => setShowModal(true)}
-            >
-            + Upload Resume
-            </button>
-
-        </div>
-
-        </div>
-
+        <button className="primary" onClick={() => setUploading(true)}>
+          <Plus size={17} /> Upload resume
+        </button>
+      </div>
+      <div className="info-note">
+        PDF only · Up to 5 MB · Private storage · Download links expire after 60
+        seconds
+      </div>
+      {query.isPending ? (
+        <Loading />
+      ) : query.isError ? (
+        <ErrorState error={query.error} retry={() => query.refetch()} />
+      ) : query.data.length ? (
         <div className="resume-grid">
-
-        {resumes.map((resume) => (
-
+          {query.data.map((r) => (
             <ResumeCard
-            key={resume.id}
-            resume={resume}
-            handleDelete={handleDelete}
+              key={r.id}
+              resume={r}
+              handleDelete={() => setDeleting(r)}
             />
-
-        ))}
-
+          ))}
         </div>
-
-        <UploadResumeModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onSuccess={async () => {
-            setShowModal(false);
-            await loadResumes();
-        }}
+      ) : (
+        <Empty>
+          <h2>Your experience deserves a home.</h2>
+          <p>Upload your first PDF to start your library.</p>
+          <button onClick={() => setUploading(true)}>Upload a resume</button>
+        </Empty>
+      )}
+      {uploading && <UploadResumeModal onClose={() => setUploading(false)} />}
+      {deleting && (
+        <Confirm
+          title={`Delete ${deleting.name}? Associated analyses will also be deleted.`}
+          onClose={() => setDeleting(null)}
+          onConfirm={() => remove.mutate(deleting.id)}
+          busy={remove.isPending}
         />
-
-    </div>
-    );
+      )}
+    </>
+  );
 }

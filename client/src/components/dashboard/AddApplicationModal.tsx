@@ -1,387 +1,157 @@
-import { useEffect, useState } from "react"
-import {
-    createApplication,
-    updateApplication,
-    uploadResume,
-    type JobApplication
-} from "../../services/applicationService"
-
-interface Props {
-    open: boolean
-    application?: JobApplication | null
-    onClose: () => void
-    onSuccess: () => void
-}
-
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import { useApi } from "../../hooks/useApi";
+import { errorMessage } from "../../services/api";
+import { statuses } from "../../types";
+import type { Application, Resume } from "../../types";
+import { Modal } from "../ui";
 export default function AddApplicationModal({
-    open,
-    application,
-    onClose,
-    onSuccess
-}: Props) {
-
-    const [loading, setLoading] = useState(false)
-    // const [resumeFile, setResumeFile] = useState<File | null>(null);
-    const [form, setForm] = useState<JobApplication>({
-        company: "",
-        role: "",
-        location: "",
-        salary: "",
-        appliedDate: new Date().toISOString().slice(0,10),
-        status: "Applied",
-        jobLink: "",
-        notes: ""
-    });
-
-
-    // const handleFileChange = (
-    //     e: React.ChangeEvent<HTMLInputElement>
-    // ) => {
-    //     if (e.target.files && e.target.files.length > 0) {
-    //         setResumeFile(e.target.files[0]);
-    //     }
-    // };
-
-    const handleChange = (
-
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-
-    )=>{
-
-        setForm({
-
-            ...form,
-
-            [e.target.name]:e.target.value
-
-        })
-
-    }
-
-    useEffect(() => {
-
-    if (application) {
-
-        setForm({
-
-            company: application.company,
-
-            role: application.role,
-
-            location: application.location ?? "",
-
-            salary: application.salary ?? "",
-
-            appliedDate:
-                application.appliedDate
-                    ? application.appliedDate.slice(0, 10)
-                    : new Date().toISOString().slice(0, 10),
-
-            status: application.status,
-
-            jobLink: application.jobLink ?? "",
-
-            notes: application.notes ?? "",
-
-        })
-
-    } else {
-
-        setForm({
-
-            company: "",
-
-            role: "",
-
-            location: "",
-
-            salary: "",
-
-            appliedDate: new Date().toISOString().slice(0,10),
-
-            status: "Applied",
-
-            jobLink: "",
-
-            notes: "",
-
-        })
-
-    }
-
-}, [application, open])
-
-const handleSubmit = async () => {
-    const payload = {
+  application,
+  onClose,
+}: {
+  application?: Application | null;
+  onClose: () => void;
+}) {
+  const api = useApi(),
+    qc = useQueryClient();
+  const [form, setForm] = useState({
+    company: application?.company ?? "",
+    role: application?.role ?? "",
+    status: application?.status ?? "Applied",
+    appliedDate:
+      application?.appliedDate.slice(0, 10) ??
+      new Date().toLocaleDateString("en-CA"),
+    location: application?.location ?? "",
+    salary: application?.salary ?? "",
+    jobLink: application?.jobLink ?? "",
+    notes: application?.notes ?? "",
+    resumeId: application?.resumeId ?? "",
+    followUpAt: application?.followUpAt?.slice(0, 10) ?? "",
+  });
+  const resumes = useQuery({
+    queryKey: ["resumes", api.userId],
+    queryFn: () => api.get<Resume[]>("/resumes"),
+  });
+  const mutation = useMutation({
+    mutationFn: () => {
+      const data = {
         ...form,
+        resumeId: form.resumeId || null,
         appliedDate: new Date(form.appliedDate).toISOString(),
-    };
-
-    if (!form.company || !form.role) {
-
-        alert("Company and Role are required.");
-
-        return;
-
-    }
-
-    try {
-
-        setLoading(true);
-
-        if (application) {
-
-            await updateApplication(
-                application.id!,
-                payload
-            );
-
-        } else {
-
-            await createApplication(payload);
-
-        }
-
-        await onSuccess();
-
-        onClose();
-
-    } catch (err) {
-
-        console.error(err);
-
-        alert("Unable to save.");
-
-    } finally {
-
-        setLoading(false);
-
-    }
-
-};
-if (!open) return null;
-    return(
-
-<div className="modal-overlay">
-
-<div className="application-modal">
-
-<h2>
-    {application ? "Edit Application" : "Add Application"}
-</h2>
-
-<div className="form-grid">
-
-<div>
-
-<label>Company *</label>
-
-<input
-
-name="company"
-
-value={form.company}
-
-onChange={handleChange}
-
-/>
-
-</div>
-
-<div>
-
-<label>Role *</label>
-
-<input
-
-name="role"
-
-value={form.role}
-
-onChange={handleChange}
-
-/>
-
-</div>
-
-<div>
-
-<label>Location</label>
-
-<input
-
-name="location"
-
-value={form.location}
-
-onChange={handleChange}
-
-/>
-
-</div>
-
-<div>
-
-<label>Salary</label>
-
-<input
-
-name="salary"
-
-value={form.salary}
-
-onChange={handleChange}
-
-/>
-
-</div>
-
-<div>
-
-<label>Application Date</label>
-
-<input
-
-type="date"
-
-name="appliedDate"
-
-value={form.appliedDate}
-
-onChange={handleChange}
-
-/>
-
-</div>
-
-<div>
-
-<label>Status</label>
-
-<select
-
-name="status"
-
-value={form.status}
-
-onChange={handleChange}
-
->
-
-<option>Applied</option>
-
-<option>OA</option>
-
-<option>Interview</option>
-
-<option>Final Round</option>
-
-<option>Offer</option>
-
-<option>Reject</option>
-
-<option>Ghosted</option>
-
-</select>
-
-</div>
-
-<div className="full-width">
-
-<label>Job Link</label>
-
-<input
-
-name="jobLink"
-
-value={form.jobLink}
-
-onChange={handleChange}
-
-/>
-
-</div>
-
-{/* <div className="full-width">
-
-    <label>Resume (PDF)</label>
-
-    <input
-        type="file"
-        accept=".pdf"
-        onChange={handleFileChange}
-    />
-
-    {resumeFile && (
-        <p style={{ marginTop: "6px", fontSize: "14px" }}>
-            Selected: {resumeFile.name}
-        </p>
-    )}
-
-</div> */}
-
-
-
-<div className="full-width">
-
-<label>Notes</label>
-
-<textarea
-
-rows={5}
-
-name="notes"
-
-value={form.notes}
-
-onChange={handleChange}
-
-/>
-
-</div>
-
-</div>
-
-<div className="modal-buttons">
-
-<button
-    type="button"
-    className="cancel-btn"
-    onClick={onClose}
+        followUpAt: form.followUpAt
+          ? new Date(`${form.followUpAt}T09:00:00`).toISOString()
+          : null,
+      };
+      return application
+        ? api.patch(`/applications/${application.id}`, data)
+        : api.post("/applications", data);
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries();
+      toast.success(application ? "Application updated" : "Application added");
+      onClose();
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  const change = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => setForm({ ...form, [e.target.name]: e.target.value });
+  return (
+    <Modal
+      title={application ? "Edit application" : "Add an application"}
+      onClose={onClose}
     >
-
-Cancel
-
-</button>
-
-<button
-
-className="save-btn"
-
-onClick={handleSubmit}
-
-disabled={loading}
-
->
-
-{
-loading
-?
-"Saving..."
-:
-application
-    ? "Update Application"
-    : "Save Application"
-}
-
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-)
-
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          mutation.mutate();
+        }}
+      >
+        <div className="form-grid">
+          {(["company", "role", "location", "salary"] as const).map((k) => (
+            <label key={k} className="capitalize">
+              {k}
+              {["company", "role"].includes(k) ? " *" : ""}
+              <input
+                name={k}
+                value={form[k]}
+                onChange={change}
+                required={["company", "role"].includes(k)}
+                maxLength={k === "salary" ? 100 : 200}
+              />
+            </label>
+          ))}
+          <label>
+            Applied date
+            <input
+              type="date"
+              name="appliedDate"
+              value={form.appliedDate}
+              required
+              onChange={change}
+            />
+          </label>
+          <label>
+            Status
+            <select name="status" value={form.status} onChange={change}>
+              {statuses.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          <label className="full-width">
+            Job URL
+            <input
+              type="url"
+              name="jobLink"
+              value={form.jobLink}
+              onChange={change}
+              maxLength={2000}
+            />
+          </label>
+          <label>
+            Resume version
+            <select name="resumeId" value={form.resumeId} onChange={change}>
+              <option value="">None selected</option>
+              {resumes.data?.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} · v{r.version}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Follow-up date (9am local)
+            <input
+              type="date"
+              name="followUpAt"
+              value={form.followUpAt}
+              onChange={change}
+            />
+          </label>
+          <label className="full-width">
+            Notes
+            <textarea
+              name="notes"
+              value={form.notes}
+              onChange={change}
+              rows={4}
+              maxLength={20000}
+            />
+          </label>
+        </div>
+        <div className="actions modal-actions">
+          <button type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="primary" disabled={mutation.isPending}>
+            {mutation.isPending ? "Saving…" : "Save application"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
