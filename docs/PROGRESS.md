@@ -30,7 +30,7 @@ Verified locally: 15 unit/component/PDF tests, 16 PostgreSQL API tests, 2 Chromi
 - [x] Full browser workflow, responsive/theme checks and desktop/mobile screenshot review
 - [x] Production frontend/backend builds
 - [x] Dependency security audit: zero known vulnerabilities at last check
-- [ ] GitHub CI/container build results after publication
+- [x] GitHub Linux CI, full test suite and both container builds passed for code commit 1071795 ([run](https://github.com/Rose-Wei10/Inteview-Tracker/actions/runs/39697360166))
 
 ## External acceptance still required
 
@@ -38,7 +38,7 @@ Verified locally: 15 unit/component/PDF tests, 16 PostgreSQL API tests, 2 Chromi
 - [ ] Inspect/backup/rehearse the actual existing database before approved migration
 - [ ] Configure and verify hosted Clerk login, private bucket policy and legacy object downloads
 - [ ] Approve/configure paid AI/SES; test consent, real output validation and actual delivery in staging
-- [ ] Run Docker locally when the daemon is available; verify Linux container jobs in CI
+- [x] Verify Linux frontend/backend container builds in GitHub CI (local Docker daemon remains unavailable)
 - [ ] Approve hosting/costs and deploy; complete health/backup/recovery acceptance
 
 No existing database, bucket object or production environment has been changed. Optional Kanban, OCR, antivirus scanning, account deletion/retention, shared distributed rate limits and calendar synchronization remain future enhancements, not completed features.

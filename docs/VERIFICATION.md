@@ -10,4 +10,6 @@ Local verification on 2026-10-21, macOS arm64, Node 25.9.0:
 - `npm audit` reports zero known vulnerabilities after dependency updates. This is a point-in-time report.
 - Existing databases, S3 objects, Clerk credentials and production infrastructure were not changed.
 
-Pending separate verification: Linux CI/container builds; live Clerk hosted sign-in; S3/IAM privacy and legacy-object downloads; managed PostgreSQL connection/migration rehearsal; SES delivery/permissions; approved real AI provider acceptance; hosting, backup and restore operations. Local Docker was not running, so container runtime behavior is not claimed as locally verified.
+GitHub Linux CI passed for code commit `1071795`, including both container builds and the full migration/API/browser suite: [verified run](https://github.com/Rose-Wei10/Inteview-Tracker/actions/runs/39697360166).
+
+Pending separate verification: live Clerk hosted sign-in; S3/IAM privacy and legacy-object downloads; managed PostgreSQL connection/migration rehearsal; SES delivery/permissions; approved real AI provider acceptance; hosting, backup and restore operations. Local Docker was not running, so container runtime behavior is not claimed as locally verified.
