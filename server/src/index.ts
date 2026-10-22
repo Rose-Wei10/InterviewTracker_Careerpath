@@ -1,36 +1,15 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import { clerkMiddleware } from "@clerk/express";
-
-import applicationRoutes from "./routes/applicationRoutes";
-import dashboardRoutes from "./routes/dashboard";
-import resumeRoutes from "./routes/resumeRoutes";
-
-dotenv.config();
-console.log("PK:", process.env.CLERK_PUBLISHABLE_KEY);
-console.log("SK:", process.env.CLERK_SECRET_KEY);
-
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-// Clerk MUST come before any routes
-app.use(clerkMiddleware());
-
-app.get("/", (req, res) => {
-  res.json({
-    message: "Interview Tracker API Running",
+import "dotenv/config";
+import { validateEnv } from "./config/env";
+import { createApp } from "./app";
+import prisma from "./config/prisma";
+const env = validateEnv();
+const server = createApp().listen(env.PORT, () =>
+  console.info(`Interview Tracker API listening on port ${env.PORT}`),
+);
+for (const signal of ["SIGTERM", "SIGINT"])
+  process.on(signal, () => {
+    server.close(() => {
+      prisma.$disconnect().finally(() => process.exit(0));
+    });
+    setTimeout(() => process.exit(1), 10000).unref();
   });
-});
-
-app.use("/api/applications", applicationRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/resumes", resumeRoutes);
-
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});

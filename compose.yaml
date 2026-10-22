@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: interview_tracker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:-postgres}
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: ["tracker-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d interview_tracker"]
+      interval: 5s
+      retries: 10
+  api:
+    build: { context: ., target: backend }
+    env_file: server/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:${LOCAL_DB_PASSWORD:-postgres}@db:5432/interview_tracker
+      CLIENT_ORIGIN: http://localhost:8080
+    ports: ["127.0.0.1:5001:5001"]
+    depends_on:
+      db: { condition: service_healthy }
+  worker:
+    build: { context: ., target: backend }
+    command: ["node", "server/dist/jobs/worker.js"]
+    env_file: server/.env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:${LOCAL_DB_PASSWORD:-postgres}@db:5432/interview_tracker
+      CLIENT_ORIGIN: http://localhost:8080
+    depends_on:
+      db: { condition: service_healthy }
+  web:
+    build:
+      context: .
+      target: frontend
+      args:
+        VITE_API_URL: http://localhost:5001/api
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
+    ports: ["127.0.0.1:8080:8080"]
+volumes:
+  tracker-db:
