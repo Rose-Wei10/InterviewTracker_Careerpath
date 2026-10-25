@@ -10,6 +10,17 @@ Set backend `DATABASE_URL`, matching Clerk keys, exact HTTPS `CLIENT_ORIGIN`, `N
 
 Vercel Functions do not run the separate persistent reminder worker. Email delivery remains disabled. Uploads are capped at 4 MB in the frontend and API to fit Vercel's 4.5 MB request body limit including multipart overhead. Existing stored PDFs up to 5 MB remain readable. Direct browser uploads would be needed for larger new uploads. All paid services and live email/AI require owner approval.
 
+### Hosted acceptance check (2026-10-24)
+
+- Frontend: https://interview-tracker-careerpath.vercel.app
+- Backend readiness: https://interview-tracker-api-one.vercel.app/ready returned `{"status":"ready"}`.
+- Both Vercel projects track GitHub `main`; pushed deployment fixes triggered builds automatically.
+- Google/Clerk login, authenticated dashboard reads, synthetic application create/read, private PDF upload, one-minute signed PDF download (HTTP 200 and exact fixture hash match), unsigned-object denial (HTTP 403), and completed demo keyword analysis passed.
+- The synthetic application, PDF object and its analysis history were removed with owner approval. No existing local records or S3 objects were moved.
+- Local validation: lint, strict types, both builds, 23 unit/component tests, and 18 isolated database integration tests; additive-migration preservation passed.
+- Compatible body-parser/multer security patches were installed. The dependency audit still reports four high-severity entries rooted in Zod (including the Vercel SDK's local CLI-auth dependency chain). Resolving these requires a separately tested major Zod migration; this is not a claim of production security clearance.
+- Clerk production authentication needs an owned custom domain, not a `vercel.app` domain. No domain purchase, paid AI, live email, paid hosting or paid database plan was enabled. The reminder worker is not running on Vercel Functions.
+
 ## Suggested architecture
 
 Use a static frontend host with HTTPS and SPA fallback, one small always-on container host for the Express API and reminder worker, a managed PostgreSQL service, private S3 storage, Clerk and optional SES. API and worker share the codebase and database, but run as separate processes. This avoids Redis and a second queue service for this portfolio's workload. The durable PostgreSQL queue survives API restarts; a sleeping/free API host also pauses reminders, so use an always-on worker when demonstrating delivery.
