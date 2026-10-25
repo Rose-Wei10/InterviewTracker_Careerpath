@@ -1,6 +1,14 @@
 # Deployment, migration and rollback
 
-No production resources have been provisioned. All paid services, live email/AI and production changes require owner approval.
+## Vercel deployment
+
+The frontend project uses root `client` (Vite), and the API uses root `server` (Express). Both track `InterviewTracker_Careerpath/main`. Frontend SPA rewrites are in `client/vercel.json`; `server/app.ts` exports the API without starting a persistent listener. The API build generates Prisma and applies the migration chain to the newly provisioned, empty managed database before compiling. Do not reuse that build migration strategy against an unknown existing database.
+
+The managed Prisma Postgres resource uses its Free plan. Private Vercel Blob uses project-scoped OIDC access, with no long-lived Blob token. New object keys have a `vercel-blob:` prefix so existing S3 keys keep their original storage behavior. Download URLs grant only one object's GET access for 60 seconds. Existing local database records and S3 objects are not migrated or changed.
+
+Set backend `DATABASE_URL`, matching Clerk keys, exact HTTPS `CLIENT_ORIGIN`, `NODE_ENV=production`, `AI_MODE=demo`, and `EMAIL_PROVIDER=console`. The Blob connection supplies `BLOB_STORE_ID` and OIDC. Set frontend `VITE_API_URL` to the API origin plus `/api`, and its matching Clerk publishable key. Never place backend secrets in frontend variables. Local Clerk credentials are development-instance keys; the hosted demo retains Clerk's development-mode limitations.
+
+Vercel Functions do not run the separate persistent reminder worker. Email delivery remains disabled. Uploads are capped at 4 MB in the frontend and API to fit Vercel's 4.5 MB request body limit including multipart overhead. Existing stored PDFs up to 5 MB remain readable. Direct browser uploads would be needed for larger new uploads. All paid services and live email/AI require owner approval.
 
 ## Suggested architecture
 

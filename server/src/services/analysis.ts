@@ -1,9 +1,7 @@
 import { z } from "zod";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { extractResumeText } from "./pdf";
 import prisma from "../config/prisma";
-import { s3 } from "../config/aws";
-import { bucket } from "../controllers/resumeController";
+import { readResume } from "./storage";
 import { HttpError } from "../lib/errors";
 const evidence = z
   .object({
@@ -161,13 +159,7 @@ export async function analyze(
       data: { userId, resumeId, jobDescription, mode },
     });
   });
-  const response = await s3.send(
-    new GetObjectCommand({ Bucket: bucket(), Key: resume.fileKey }),
-  );
-  if ((response.ContentLength ?? 0) > 5 * 1024 * 1024)
-    throw new HttpError(400, "Resume exceeds analysis size limit");
-  const bytes = await response.Body?.transformToByteArray();
-  if (!bytes) throw new HttpError(400, "Resume could not be read");
+  const bytes = await readResume(resume.fileKey);
   let text: string;
   try {
     text = await extractResumeText(bytes);

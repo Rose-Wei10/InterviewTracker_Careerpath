@@ -20,6 +20,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1098.0",
     "@clerk/express": "^2.1.45",
     "@prisma/client": "^5.22.0",
+    "@vercel/blob": "^2.8.2",
     "cors": "^2.8.6",
     "csv-parse": "^7.0.3",
     "dotenv": "^17.4.2",

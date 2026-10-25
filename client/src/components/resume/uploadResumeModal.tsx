@@ -19,8 +19,8 @@ export default function UploadResumeModal({
   const upload = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error("Choose a PDF");
-      if (file.size > 5 * 1024 * 1024)
-        throw new Error("PDF must be 5 MB or smaller");
+      if (file.size > 4 * 1024 * 1024)
+        throw new Error("PDF must be 4 MB or smaller");
       const data = new FormData();
       data.append("resume", file);
       data.append("name", name);
@@ -73,7 +73,7 @@ export default function UploadResumeModal({
           />
         </label>
         <label>
-          PDF file (maximum 5 MB)
+          PDF file (maximum 4 MB)
           <input
             required
             type="file"
