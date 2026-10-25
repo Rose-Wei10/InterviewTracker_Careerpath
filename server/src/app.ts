@@ -4,7 +4,7 @@ import express from "express";
 import type { RequestHandler } from "express";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { clerkMiddleware } from "@clerk/express";
 import applicationRoutes from "./routes/applicationRoutes";
 import dashboardRoutes from "./routes/dashboard";
@@ -30,6 +30,17 @@ export function createApp(
   app.use(express.json({ limit: "1mb" }));
   app.use(
     rateLimit({
+      // Vercel overwrites X-Forwarded-For at its ingress; other hosts keep Express defaults.
+      ...(process.env.VERCEL
+        ? {
+            keyGenerator: (req: express.Request) =>
+              ipKeyGenerator(
+                req.get("x-forwarded-for")?.split(",")[0].trim() ??
+                  req.ip ??
+                  "unknown",
+              ),
+          }
+        : {}),
       windowMs: 60000,
       limit: 120,
       standardHeaders: "draft-8",

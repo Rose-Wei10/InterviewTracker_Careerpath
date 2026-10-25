@@ -1,4 +1,9 @@
 {
   "buildCommand": "npm exec -- prisma generate && npm exec -- prisma migrate deploy && npm run build",
-  "installCommand": "npm install --include=dev"
+  "installCommand": "npm install --include=dev",
+  "functions": {
+    "src/app.ts": {
+      "includeFiles": "../node_modules/{@napi-rs/canvas*,pdf-parse,pdfjs-dist}/**"
+    }
+  }
 }

@@ -50,7 +50,7 @@ export default function ResumeLibrary() {
         </button>
       </div>
       <div className="info-note">
-        PDF only · Up to 5 MB · Private storage · Download links expire after 60
+        PDF only · Up to 4 MB · Private storage · Download links expire after 60
         seconds
       </div>
       {query.isPending ? (
