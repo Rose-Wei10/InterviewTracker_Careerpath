@@ -2,7 +2,7 @@
 
 ## Vercel deployment
 
-The frontend project uses root `client` (Vite), and the API uses root `server` (Express). Both track `InterviewTracker_Careerpath/main`. Frontend SPA rewrites are in `client/vercel.json`; `server/app.ts` exports the API without starting a persistent listener. The API build generates Prisma and applies the migration chain to the newly provisioned, empty managed database before compiling. Do not reuse that build migration strategy against an unknown existing database.
+The frontend project uses root `client` (Vite), and the API uses root `server` (Express). Both track `InterviewTracker_Careerpath/main`. Frontend SPA rewrites are in `client/vercel.json`; `server/src/app.ts` exports the API without starting a persistent listener. The API build generates Prisma and applies the migration chain to the newly provisioned, empty managed database before compiling. Do not reuse that build migration strategy against an unknown existing database.
 
 The managed Prisma Postgres resource uses its Free plan. Private Vercel Blob uses project-scoped OIDC access, with no long-lived Blob token. New object keys have a `vercel-blob:` prefix so existing S3 keys keep their original storage behavior. Download URLs grant only one object's GET access for 60 seconds. Existing local database records and S3 objects are not migrated or changed.
 

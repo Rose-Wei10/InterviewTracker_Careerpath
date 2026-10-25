@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { validateEnv } from "./config/env";
 import express from "express";
 import type { RequestHandler } from "express";
 import cors from "cors";
@@ -94,3 +95,6 @@ export function createApp(
   app.use(errorHandler);
   return app;
 }
+
+if (process.env.VERCEL) validateEnv();
+export default createApp();
