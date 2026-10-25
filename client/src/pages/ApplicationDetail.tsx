@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { fromZonedTime } from "date-fns-tz";
 import { useApi } from "../hooks/useApi";
 import { errorMessage } from "../services/api";
+import { invalidateUserQueries } from "../services/queryCache";
 import type { Application } from "../types";
 import { statuses } from "../types";
 import { Loading, ErrorState, Modal } from "../components/ui";
@@ -14,7 +15,8 @@ export default function ApplicationDetail() {
   const { id } = useParams(),
     api = useApi(),
     qc = useQueryClient();
-  const [editing, setEditing] = useState(false),
+  const [params, setParams] = useSearchParams();
+  const [editing, setEditing] = useState(params.get("edit") === "1"),
     [scheduling, setScheduling] = useState(false);
   const query = useQuery({
     queryKey: ["application", api.userId, id],
@@ -24,7 +26,11 @@ export default function ApplicationDetail() {
     mutationFn: (status: string) =>
       api.patch(`/applications/${id}`, { status }),
     onSuccess: () => {
-      void qc.invalidateQueries();
+      void invalidateUserQueries(qc, api.userId, [
+        "application",
+        "applications",
+        "dashboard",
+      ]);
       toast.success("Status updated");
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -39,7 +45,12 @@ export default function ApplicationDetail() {
     }) =>
       api.patch(`/applications/${id}/interviews/${interviewId}`, { status }),
     onSuccess: () => {
-      void qc.invalidateQueries();
+      void invalidateUserQueries(qc, api.userId, [
+        "application",
+        "dashboard",
+        "interviews",
+        "reminders",
+      ]);
       toast.success("Interview updated");
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -53,8 +64,11 @@ export default function ApplicationDetail() {
       <Link to="/applications" className="back">
         ← All applications
       </Link>
-      <div className="page-heading">
+      <div className="page-heading detail-heading">
         <div>
+          <span className={`badge status-${a.status.replace(" ", "-")}`}>
+            {a.status}
+          </span>
           <p className="eyebrow">APPLICATION DETAILS</p>
           <h1>{a.company}</h1>
           <p>
@@ -86,8 +100,6 @@ export default function ApplicationDetail() {
             <dd>{new Date(a.appliedDate).toLocaleDateString()}</dd>
             <dt>Salary</dt>
             <dd>{a.salary || "Not added"}</dd>
-            <dt>Resume</dt>
-            <dd>{a.resume?.name || "Not selected"}</dd>
             <dt>Follow up</dt>
             <dd>
               {a.followUpAt
@@ -105,10 +117,19 @@ export default function ApplicationDetail() {
               )}
             </dd>
           </dl>
-          <h2>Notes</h2>
-          <p className="notes">
-            {a.notes || "Add notes to keep the important details close."}
-          </p>
+          <section className="detail-section">
+            <h2>Resume</h2>
+            <p className="notes">
+              {a.resume?.name ||
+                "No resume selected. Choose a version when editing."}
+            </p>
+          </section>
+          <section className="detail-section">
+            <h2>Notes</h2>
+            <p className="notes">
+              {a.notes || "Add notes to keep the important details close."}
+            </p>
+          </section>
         </section>
         <ActivityFeed data={a.activities ?? []} />
       </div>
@@ -157,7 +178,12 @@ export default function ApplicationDetail() {
       {editing && (
         <AddApplicationModal
           application={a}
-          onClose={() => setEditing(false)}
+          onClose={() => {
+            setEditing(false);
+            const next = new URLSearchParams(params);
+            next.delete("edit");
+            setParams(next, { replace: true });
+          }}
         />
       )}
       {scheduling && (
@@ -191,7 +217,12 @@ function InterviewForm({ id, onClose }: { id: string; onClose: () => void }) {
       });
     },
     onSuccess: () => {
-      void qc.invalidateQueries();
+      void invalidateUserQueries(qc, api.userId, [
+        "application",
+        "dashboard",
+        "interviews",
+        "reminders",
+      ]);
       toast.success("Interview scheduled");
       onClose();
     },

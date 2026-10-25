@@ -45,7 +45,7 @@ export default function Analysis() {
       }),
     onSuccess: (r) => {
       setSelected(r);
-      void qc.invalidateQueries({ queryKey: ["analyses"] });
+      void qc.invalidateQueries({ queryKey: ["analyses", api.userId] });
       toast.success("Analysis ready");
     },
     onError: (e) => toast.error(errorMessage(e)),
@@ -55,7 +55,7 @@ export default function Analysis() {
     onSuccess: () => {
       if (selected?.id === deleting) setSelected(null);
       setDeleting(null);
-      void qc.invalidateQueries({ queryKey: ["analyses"] });
+      void qc.invalidateQueries({ queryKey: ["analyses", api.userId] });
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
@@ -85,6 +85,17 @@ export default function Analysis() {
           failed attempts.
         </div>
       )}
+      <ol className="workflow-steps" aria-label="Resume matching steps">
+        <li aria-current={!resumeId ? "step" : undefined}>
+          <span>1</span>Select a resume
+        </li>
+        <li aria-current={resumeId && !selected ? "step" : undefined}>
+          <span>2</span>Add a job description
+        </li>
+        <li aria-current={selected ? "step" : undefined}>
+          <span>3</span>Review the evidence
+        </li>
+      </ol>
       <div className="detail-grid">
         <section className="card">
           <h2>Compare an opportunity</h2>

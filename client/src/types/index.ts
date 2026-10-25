@@ -31,7 +31,8 @@ export interface Activity {
   kind: string;
   createdAt: string;
   metadata: Record<string, unknown>;
-  application?: { company: string; role: string };
+  applicationId?: string;
+  application?: { id?: string; company: string; role: string };
 }
 export interface Interview {
   id: string;
@@ -68,6 +69,13 @@ export interface DashboardData {
   rateLabel: string;
   recent: Activity[];
   upcoming: Interview[];
+  followUps: {
+    id: string;
+    company: string;
+    role: string;
+    followUpAt: string;
+  }[];
+  followUpCount: number;
   weekly: { date: string; count: number }[];
   monthly: { date: string; count: number }[];
 }

@@ -6,8 +6,9 @@ The upgrade preserves the existing application's data model and resume object ke
 
 ## Features
 
-- **Dashboard:** date filters, totals for all seven statuses, weekly/monthly trends, current-stage distribution, explicitly labeled status-based response/interview rate proxies, upcoming interviews and persisted recent activity. Statistics come from the signed-in user's database records.
-- **Applications:** create, edit, detail and delete; company/role search; location/status/date filters; sorting; bounded server pagination; notes, salary, HTTP(S) job links, resume selection and follow-up dates.
+- **Workspace:** indigo/lavender light theme, navy dark theme, frosted navigation, readable content cards, responsive application cards and accessible dialogs.
+- **Dashboard:** date filters, totals for all seven statuses, weekly/monthly trends, current-stage distribution, explicitly labeled status-based response/interview rate proxies, upcoming interviews, linked recent activity and a follow-up action center. Totals/offers/stages open filtered applications while preserving the analytics date range. Statistics come from the signed-in user's database records.
+- **Applications:** create, edit, detail and delete; company/role search; location/status/date filters; sorting; bounded server pagination; notes, salary, HTTP(S) job links, resume selection and follow-up dates; quick status updates, removable filter chips and reset filters. Search remains synchronized with browser history.
 - **CSV:** transactional imports of up to 500 rows and filtered exports of up to 10,000 rows; invalid batches fail without partial imports; formula-leading export cells are escaped.
 - **Resume library:** named PDF versions, 5 MB limit, PDF signature validation, private S3 objects, one-minute presigned downloads and ownership checks. Legacy object keys/URLs remain in the database; legacy URLs are no longer returned by list endpoints.
 - **Resume match:** select a stored PDF, paste a job description, save and delete analysis history. The default **demo** is a local keyword comparison, clearly labeled as not AI. An optional OpenAI-compatible provider adds evidence-linked coaching. Matching percentages are heuristics, never ATS scores or hiring predictions.
@@ -55,6 +56,8 @@ flowchart LR
 | Analysis       | Owner/resume, job description, mode, result and creation date; incomplete attempts count toward quota |
 
 Owner/date and owner/status indexes support scoped lists. Application deletion cascades dependent timeline/rounds/reminders. Resume deletion clears application selection and deletes associated analyses. The migration adds tables/nullable columns/defaults without deleting existing records or object keys.
+
+The dashboard response includes `followUps: [{id, company, role, followUpAt}]` and `followUpCount`. It returns the earliest ten active-application follow-ups due within seven days (including overdue), excluding Offer, Reject and Ghosted stages. Follow-ups and upcoming interviews are independent of the historical analytics filter. Clearing/rescheduling uses the existing application PATCH endpoint. The refresh adds no database migration or dependency.
 
 ## Local setup
 
@@ -124,7 +127,7 @@ Bearer authentication is required for `/api/*`. Errors use `{message, errors?: [
 | `/api/applications/export`                      | GET filtered CSV                                                        |
 | `/api/applications/:id/interviews`              | POST round and optional reminder                                        |
 | `/api/applications/:id/interviews/:interviewId` | PATCH round status/notes                                                |
-| `/api/dashboard`                                | GET scoped aggregates; `from`/`to` date filters                         |
+| `/api/dashboard`                                | GET scoped aggregates; `from`/`to` date filters; bounded follow-ups     |
 | `/api/interviews`                               | GET owned calendar rounds                                               |
 | `/api/reminders`                                | GET owned delivery statuses                                             |
 | `/api/resumes`                                  | GET metadata; POST multipart `resume`, `name`, `description`, `version` |

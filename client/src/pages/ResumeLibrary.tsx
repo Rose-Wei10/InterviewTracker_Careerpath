@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import toast from "react-hot-toast";
 import { useApi } from "../hooks/useApi";
 import { errorMessage } from "../services/api";
+import { invalidateUserQueries } from "../services/queryCache";
 import type { Resume } from "../types";
 import { Loading, ErrorState, Empty, Confirm } from "../components/ui";
 import UploadResumeModal from "../components/resume/uploadResumeModal";
@@ -20,7 +21,12 @@ export default function ResumeLibrary() {
   const remove = useMutation({
     mutationFn: (id: string) => api.remove(`/resumes/${id}`),
     onSuccess: () => {
-      void qc.invalidateQueries();
+      void invalidateUserQueries(qc, api.userId, [
+        "resumes",
+        "application",
+        "applications",
+        "analyses",
+      ]);
       setDeleting(null);
       toast.success("Resume deleted");
     },

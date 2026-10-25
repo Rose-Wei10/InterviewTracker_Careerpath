@@ -9,6 +9,7 @@ import { statuses } from "../types";
 import StatCards from "../components/dashboard/StatCards";
 import FunnelChart from "../components/dashboard/FunnelChart";
 import ActivityFeed from "../components/dashboard/ActivityFeed";
+import FollowUps from "../components/dashboard/FollowUps";
 import UpcomingInterviews from "../components/dashboard/UpcomingInterviews";
 import { Loading, ErrorState, Empty } from "../components/ui";
 export default function Dashboard() {
@@ -27,6 +28,13 @@ export default function Dashboard() {
             .slice(0, 10);
   const to =
     range === "custom" && custom.to ? `${custom.to}T23:59:59.999Z` : undefined;
+  function applicationUrl(status?: string) {
+    const params = new URLSearchParams();
+    if (from) params.set("from", from);
+    if (range === "custom" && custom.to) params.set("to", custom.to);
+    if (status) params.set("status", status);
+    return `/applications?${params}`;
+  }
   const query = useQuery({
     queryKey: ["dashboard", api.userId, from, to],
     queryFn: () =>
@@ -88,7 +96,7 @@ export default function Dashboard() {
         <ErrorState error={query.error} retry={() => query.refetch()} />
       ) : (
         <>
-          <StatCards data={query.data} />
+          <StatCards data={query.data} applicationUrl={applicationUrl} />
           <div className="chart-grid">
             <section className="card">
               <div className="section-heading">
@@ -121,7 +129,12 @@ export default function Dashboard() {
               </div>
               <div className="funnel">
                 {statuses.map((s) => (
-                  <div className="funnel-row" key={s}>
+                  <Link
+                    className="funnel-row"
+                    key={s}
+                    to={applicationUrl(s)}
+                    aria-label={`${s}: ${query.data.counts[s]} applications`}
+                  >
                     <span>{s}</span>
                     <div className="funnel-track">
                       <div
@@ -132,7 +145,7 @@ export default function Dashboard() {
                       />
                     </div>
                     <strong>{query.data.counts[s]}</strong>
-                  </div>
+                  </Link>
                 ))}
               </div>
               <p className="fine-print">
@@ -141,9 +154,21 @@ export default function Dashboard() {
               </p>
             </section>
           </div>
+          <div className="section-kicker">
+            <h2>Your action center</h2>
+            <p>
+              What needs attention now · Independent of the analytics date range
+            </p>
+          </div>
           <div className="below-grid">
+            <FollowUps
+              items={query.data.followUps}
+              total={query.data.followUpCount}
+            />
             <UpcomingInterviews data={query.data.upcoming} />
-            <ActivityFeed data={query.data.recent} />
+          </div>
+          <div className="dashboard-activity">
+            <ActivityFeed data={query.data.recent.slice(0, 4)} />
           </div>
         </>
       )}

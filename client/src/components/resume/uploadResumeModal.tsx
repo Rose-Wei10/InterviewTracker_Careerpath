@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useApi } from "../../hooks/useApi";
 import { errorMessage } from "../../services/api";
+import { invalidateUserQueries } from "../../services/queryCache";
 import { Modal } from "../ui";
 export default function UploadResumeModal({
   onClose,
@@ -28,7 +29,7 @@ export default function UploadResumeModal({
       return api.post("/resumes", data);
     },
     onSuccess: () => {
-      void qc.invalidateQueries();
+      void invalidateUserQueries(qc, api.userId, ["resumes"]);
       toast.success("Resume uploaded");
       onClose();
     },

@@ -1,18 +1,23 @@
 import { Link } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
-import type { Application } from "../../types";
+import { statuses } from "../../types";
+import type { Application, Status } from "../../types";
 export default function ApplicationsTable({
   applications,
   onEdit,
   onDelete,
+  onStatusChange,
+  pendingId,
 }: {
   applications: Application[];
   onEdit: (a: Application) => void;
   onDelete: (a: Application) => void;
+  onStatusChange?: (id: string, status: Status) => void;
+  pendingId?: string;
 }) {
   return (
     <div className="table-scroll">
-      <table>
+      <table className="application-table">
         <thead>
           <tr>
             <th>Company / role</th>
@@ -33,17 +38,39 @@ export default function ApplicationsTable({
                   </Link>
                   <p>{a.role}</p>
                 </td>
-                <td>{a.location || "—"}</td>
-                <td>{new Date(a.appliedDate).toLocaleDateString()}</td>
-                <td>
-                  <span
-                    className={`badge status-${a.status.replace(" ", "-")}`}
-                  >
-                    {a.status}
-                  </span>
+                <td data-label="Location">{a.location || "—"}</td>
+                <td data-label="Applied">
+                  {new Date(a.appliedDate).toLocaleDateString()}
                 </td>
-                <td>{a.salary || "—"}</td>
-                <td>
+                <td data-label="Status">
+                  {onStatusChange ? (
+                    <div className="status-control">
+                      <select
+                        aria-label={`Status for ${a.company}`}
+                        value={a.status}
+                        disabled={!!pendingId}
+                        onChange={(e) =>
+                          onStatusChange(a.id, e.target.value as Status)
+                        }
+                      >
+                        {statuses.map((status) => (
+                          <option key={status}>{status}</option>
+                        ))}
+                      </select>
+                      {pendingId === a.id && (
+                        <small role="status">Saving status…</small>
+                      )}
+                    </div>
+                  ) : (
+                    <span
+                      className={`badge status-${a.status.replace(" ", "-")}`}
+                    >
+                      {a.status}
+                    </span>
+                  )}
+                </td>
+                <td data-label="Salary">{a.salary || "—"}</td>
+                <td data-label="Actions">
                   <div className="actions">
                     <button
                       aria-label={`Edit ${a.company}`}

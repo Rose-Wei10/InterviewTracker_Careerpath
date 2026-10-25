@@ -20,8 +20,8 @@ export default function FunnelChart({
       >
         <defs>
           <linearGradient id="trend" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#567862" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="#567862" stopOpacity={0} />
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid
@@ -31,19 +31,20 @@ export default function FunnelChart({
         />
         <XAxis
           dataKey="date"
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: 11, fill: "var(--muted)" }}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
           allowDecimals={false}
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: 11, fill: "var(--muted)" }}
           tickLine={false}
           axisLine={false}
         />
         <Tooltip
           contentStyle={{
             background: "var(--surface)",
+            color: "var(--text)",
             border: "1px solid var(--border)",
             borderRadius: 10,
           }}
@@ -53,7 +54,7 @@ export default function FunnelChart({
           type="monotone"
           dataKey="count"
           name="Applications"
-          stroke="#567862"
+          stroke="var(--accent)"
           strokeWidth={2.5}
           fill="url(#trend)"
         />

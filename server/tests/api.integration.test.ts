@@ -339,14 +339,12 @@ describe("real PostgreSQL API behavior", () => {
       improvements: [],
       preparationTopics: ["Discuss a React project you can substantiate."],
     };
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [{ message: { content: JSON.stringify(result) } }],
-        }),
-      });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(result) } }],
+      }),
+    });
     vi.stubGlobal("fetch", fetchMock);
     try {
       const denied = await as("post", "/api/analyses", "provider-user").send({
@@ -433,5 +431,102 @@ describe("real PostgreSQL API behavior", () => {
     expect(await prisma.reminder.count({ where: { applicationId: id } })).toBe(
       0,
     );
+  });
+});
+
+describe("dashboard follow-up action center", () => {
+  it("includes the seven-day boundary, excludes terminal and other-user records, and ignores analytics dates", async () => {
+    const now = new Date("2030-01-10T12:00:00Z");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(now);
+    try {
+      await prisma.user.createMany({
+        data: [{ id: "follow-alice" }, { id: "follow-bob" }],
+      });
+      const rows = [
+        { id: "overdue", followUpAt: new Date(now.getTime() - 1) },
+        { id: "due-now", followUpAt: now },
+        { id: "boundary", followUpAt: new Date(now.getTime() + 7 * 86400000) },
+        {
+          id: "too-late",
+          followUpAt: new Date(now.getTime() + 7 * 86400000 + 1),
+        },
+        { id: "no-date", followUpAt: null },
+        ...["Offer", "Reject", "Ghosted"].map((status) => ({
+          id: status,
+          status,
+          followUpAt: now,
+        })),
+        { id: "other-user", userId: "follow-bob", followUpAt: now },
+      ];
+      await prisma.jobApplication.createMany({
+        data: rows.map((row) => ({
+          company: row.id,
+          role: "Engineer",
+          userId: "follow-alice",
+          appliedDate: now,
+          ...row,
+        })),
+      });
+      const r = await as(
+        "get",
+        "/api/dashboard?from=2031-01-01",
+        "follow-alice",
+      );
+      expect(r.status).toBe(200);
+      expect(r.body.total).toBe(0);
+      expect(r.body.followUpCount).toBe(3);
+      expect(r.body.followUps.map((v: { id: string }) => v.id)).toEqual([
+        "overdue",
+        "due-now",
+        "boundary",
+      ]);
+      expect(Object.keys(r.body.followUps[0]).sort()).toEqual([
+        "company",
+        "followUpAt",
+        "id",
+        "role",
+      ]);
+      expect(
+        (await as("get", "/api/dashboard", "follow-bob")).body.followUps.map(
+          (v: { id: string }) => v.id,
+        ),
+      ).toEqual(["other-user"]);
+      expect(
+        (await as("get", "/api/dashboard", "no-follow-ups")).body.followUps,
+      ).toEqual([]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("returns only the earliest ten while counting all matches and reflects cleared dates", async () => {
+    await prisma.user.create({ data: { id: "follow-bounded" } });
+    await prisma.jobApplication.createMany({
+      data: Array.from({ length: 12 }, (_, i) => ({
+        id: `bounded-${i}`,
+        userId: "follow-bounded",
+        company: `Bounded ${i}`,
+        role: "Engineer",
+        followUpAt: new Date(Date.UTC(2000, 0, i + 1)),
+      })),
+    });
+    const r = await as("get", "/api/dashboard", "follow-bounded");
+    expect(r.body.followUps).toHaveLength(10);
+    expect(r.body.followUpCount).toBe(12);
+    expect(r.body.followUps.map((v: { id: string }) => v.id)).toEqual(
+      Array.from({ length: 10 }, (_, i) => `bounded-${i}`),
+    );
+    expect(
+      (
+        await as("patch", "/api/applications/bounded-0", "follow-bounded").send(
+          {
+            followUpAt: null,
+          },
+        )
+      ).status,
+    ).toBe(200);
+    const after = await as("get", "/api/dashboard", "follow-bounded");
+    expect(after.body.followUpCount).toBe(11);
+    expect(after.body.followUps[0].id).toBe("bounded-1");
   });
 });

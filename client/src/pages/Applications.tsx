@@ -6,12 +6,13 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
-import { Plus, Download, Upload, Search } from "lucide-react";
+import { Plus, Download, Upload, Search, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { useApi } from "../hooks/useApi";
 import { errorMessage } from "../services/api";
+import { invalidateUserQueries } from "../services/queryCache";
 import { statuses } from "../types";
-import type { Application, Page } from "../types";
+import type { Application, Page, Status } from "../types";
 import ApplicationsTable from "../components/dashboard/ApplicationsTable";
 import AddApplicationModal from "../components/dashboard/AddApplicationModal";
 import { Confirm, ErrorState, Loading } from "../components/ui";
@@ -23,8 +24,8 @@ export default function Applications() {
       params.get("new") ? null : undefined,
     ),
     [deleting, setDeleting] = useState<Application | null>(null);
-  const [search, setSearch] = useState(params.get("search") ?? ""),
-    [debounced, setDebounced] = useState(search);
+  const search = params.get("search") ?? "";
+  const [debounced, setDebounced] = useState(search);
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(search), 300);
     return () => clearTimeout(timer);
@@ -56,11 +57,37 @@ export default function Applications() {
     mutationFn: (id: string) => api.remove(`/applications/${id}`),
     onSuccess: async () => {
       setDeleting(null);
-      await qc.invalidateQueries();
+      await invalidateUserQueries(qc, api.userId, [
+        "applications",
+        "application",
+        "dashboard",
+        "interviews",
+        "reminders",
+      ]);
       toast.success("Application deleted");
     },
     onError: (e) => toast.error(errorMessage(e)),
   });
+  const statusUpdate = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: Status }) =>
+      api.patch(`/applications/${id}`, { status }),
+    onSuccess: async () => {
+      await invalidateUserQueries(qc, api.userId, [
+        "applications",
+        "application",
+        "dashboard",
+      ]);
+      toast.success("Status updated");
+    },
+    onError: (e) => toast.error(errorMessage(e)),
+  });
+  const activeFilters = [
+    ["search", "Search"],
+    ["status", "Status"],
+    ["location", "Location"],
+    ["from", "From"],
+    ["to", "To"],
+  ].filter(([key]) => params.get(key));
   async function exportCsv() {
     try {
       const blob = await api.csv(filters),
@@ -87,7 +114,11 @@ export default function Applications() {
         { csv: await file.text() },
       );
       toast.success(`Imported ${result.imported} applications`);
-      await qc.invalidateQueries();
+      await invalidateUserQueries(qc, api.userId, [
+        "applications",
+        "dashboard",
+        "reminders",
+      ]);
     } catch (e) {
       toast.error(errorMessage(e));
     }
@@ -143,7 +174,6 @@ export default function Applications() {
               placeholder="Company or role…"
               value={search}
               onChange={(e) => {
-                setSearch(e.target.value);
                 filter("search", e.target.value);
               }}
             />
@@ -208,6 +238,23 @@ export default function Applications() {
             </select>
           </label>
         </div>
+        {activeFilters.length > 0 && (
+          <div className="active-filters" aria-label="Active filters">
+            {activeFilters.map(([key, label]) => (
+              <button
+                className="filter-chip"
+                key={key}
+                onClick={() => filter(key, "")}
+                aria-label={`Remove ${label.toLowerCase()} filter`}
+              >
+                {label}: {params.get(key)} <X size={13} aria-hidden="true" />
+              </button>
+            ))}
+            <button onClick={() => setParams(new URLSearchParams())}>
+              Reset filters
+            </button>
+          </div>
+        )}
         {query.isPending ? (
           <Loading />
         ) : query.isError ? (
@@ -218,6 +265,12 @@ export default function Applications() {
               applications={query.data.items}
               onEdit={setEditing}
               onDelete={setDeleting}
+              onStatusChange={(id, status) =>
+                statusUpdate.mutate({ id, status })
+              }
+              pendingId={
+                statusUpdate.isPending ? statusUpdate.variables.id : undefined
+              }
             />
             <div className="pagination">
               <span>

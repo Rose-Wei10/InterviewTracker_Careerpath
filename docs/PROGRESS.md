@@ -1,8 +1,23 @@
 # Upgrade progress
 
-Branch: `feat/saas-upgrade`. Original baseline: a354e1b.
+Branch: `Test/indigo-workspace`, based on the local SaaS upgrade at `b4030e8`. Original baseline: a354e1b.
 
-## Implemented locally
+## Indigo glass refresh
+
+- [x] Shared indigo/lavender light theme and navy dark theme; glass navigation with opaque content and a solid fallback
+- [x] Responsive navigation, application cards on mobile, readable typography and theme-aware dialogs
+- [x] User-scoped follow-up action center, earliest ten due within seven days including overdue items, terminal stages excluded
+- [x] Analytics drill-down links preserve date range; action-center dates remain independent
+- [x] Quick status updates with pending/error recovery; active filter chips/reset and URL-driven search history
+- [x] Structured detail layout, selected-day calendar agenda, consistent resume cards and matching workflow steps
+- [x] Preserve existing application/follow-up timestamps when their dates are unchanged
+- [x] Targeted per-user cache invalidation and removal of eight verified unused files
+- [x] 20 unit/component/PDF tests, 18 database API tests, 4 browser tests, screenshots, lint, typechecks and production builds
+- [x] Measured bundle and controlled query-refresh comparison recorded in [verification](VERIFICATION.md)
+
+No schema migration or additional dependency is required by this refresh. Implementation is local; deployment, live-provider acceptance and production data changes remain outside this release.
+
+## SaaS foundation (previous upgrade)
 
 - [x] Audit architecture, existing functionality, security issues, data migration risks and phase complexity
 - [x] Strict Clerk-protected API boundaries, validation, owner-scoped mutation predicates, safe errors, CORS and limits
@@ -20,7 +35,7 @@ Branch: `feat/saas-upgrade`. Original baseline: a354e1b.
 - [x] CI checks and Docker targets; deployment, rollback, privacy and setup runbooks
 - [x] Accurate README, architecture diagram, walkthrough and three portfolio bullets
 
-## Final verification
+## Previous foundation verification
 
 Verified locally: 15 unit/component/PDF tests, 16 PostgreSQL API tests, 2 Chromium E2E tests. Fresh migrations and legacy resume preservation also pass. External provider interactions are mocked in tests.
 

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import {
   BriefcaseBusiness,
   MessagesSquare,
@@ -5,10 +6,17 @@ import {
   PartyPopper,
 } from "lucide-react";
 import type { DashboardData } from "../../types";
-export default function StatCards({ data }: { data: DashboardData }) {
+export default function StatCards({
+  data,
+  applicationUrl,
+}: {
+  data: DashboardData;
+  applicationUrl: (status?: string) => string;
+}) {
   const cards = [
     {
       label: "Total applications",
+      href: applicationUrl(),
       value: data.total,
       caption: "Every opportunity in one place",
       Icon: BriefcaseBusiness,
@@ -27,6 +35,7 @@ export default function StatCards({ data }: { data: DashboardData }) {
     },
     {
       label: "Offers received",
+      href: applicationUrl("Offer"),
       value: data.counts.Offer,
       caption: "Your hard work, paying off",
       Icon: PartyPopper,
@@ -34,18 +43,29 @@ export default function StatCards({ data }: { data: DashboardData }) {
   ];
   return (
     <div className="stats">
-      {cards.map(({ label, value, caption, Icon }) => (
-        <article className="stat-card" key={label}>
-          <div className="stat-label">
-            {label}
-            <span className="stat-icon">
-              <Icon size={18} />
-            </span>
-          </div>
-          <h2>{value}</h2>
-          <p>{caption}</p>
-        </article>
-      ))}
+      {cards.map(({ label, value, caption, Icon, href }) => {
+        const content = (
+          <>
+            <div className="stat-label">
+              {label}
+              <span className="stat-icon">
+                <Icon size={18} />
+              </span>
+            </div>
+            <h2>{value}</h2>
+            <p>{caption}</p>
+          </>
+        );
+        return href ? (
+          <Link className="stat-card" key={label} to={href}>
+            {content}
+          </Link>
+        ) : (
+          <article className="stat-card" key={label}>
+            {content}
+          </article>
+        );
+      })}
     </div>
   );
 }

@@ -43,10 +43,10 @@ export default function Layout() {
             <CalendarDays size={18} /> Interviews
           </NavLink>
           <NavLink to="/resumes">
-            <Files size={18} /> Resume library
+            <Files size={18} /> Resumes
           </NavLink>
           <NavLink to="/analysis">
-            <Sparkles size={18} /> Resume match
+            <Sparkles size={18} /> Match
           </NavLink>
         </nav>
         <div className="sidebar-bottom">

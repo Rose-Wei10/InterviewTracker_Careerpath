@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import type { Activity } from "../../types";
 export function activityLabel(kind: string) {
   return kind.toLowerCase().replaceAll("_", " ");
@@ -17,7 +18,17 @@ export default function ActivityFeed({ data }: { data: Activity[] }) {
             <li key={item.id}>
               <span className="timeline-dot" />
               <div>
-                <strong>{item.application?.company ?? "Application"}</strong>
+                {item.application?.id || item.applicationId ? (
+                  <Link
+                    to={`/applications/${item.application?.id ?? item.applicationId}`}
+                  >
+                    <strong>
+                      {item.application?.company ?? "Application"}
+                    </strong>
+                  </Link>
+                ) : (
+                  <strong>{item.application?.company ?? "Application"}</strong>
+                )}
                 <p className="capitalize">
                   {activityLabel(item.kind)}{" "}
                   {typeof item.metadata.to === "string"

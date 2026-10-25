@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useApi } from "../../hooks/useApi";
 import { errorMessage } from "../../services/api";
+import { invalidateUserQueries } from "../../services/queryCache";
 import { statuses } from "../../types";
 import type { Application, Resume } from "../../types";
 import { Modal } from "../ui";
@@ -15,6 +16,9 @@ export default function AddApplicationModal({
 }) {
   const api = useApi(),
     qc = useQueryClient();
+  const savedFollowUpDate = application?.followUpAt
+    ? new Date(application.followUpAt).toLocaleDateString("en-CA")
+    : "";
   const [form, setForm] = useState({
     company: application?.company ?? "",
     role: application?.role ?? "",
@@ -27,7 +31,7 @@ export default function AddApplicationModal({
     jobLink: application?.jobLink ?? "",
     notes: application?.notes ?? "",
     resumeId: application?.resumeId ?? "",
-    followUpAt: application?.followUpAt?.slice(0, 10) ?? "",
+    followUpAt: savedFollowUpDate,
   });
   const resumes = useQuery({
     queryKey: ["resumes", api.userId],
@@ -35,20 +39,34 @@ export default function AddApplicationModal({
   });
   const mutation = useMutation({
     mutationFn: () => {
+      const { followUpAt, ...fields } = form;
       const data = {
-        ...form,
+        ...fields,
         resumeId: form.resumeId || null,
-        appliedDate: new Date(form.appliedDate).toISOString(),
-        followUpAt: form.followUpAt
-          ? new Date(`${form.followUpAt}T09:00:00`).toISOString()
-          : null,
+        appliedDate:
+          application &&
+          form.appliedDate === application.appliedDate.slice(0, 10)
+            ? application.appliedDate
+            : new Date(form.appliedDate).toISOString(),
+        ...(!application || followUpAt !== savedFollowUpDate
+          ? {
+              followUpAt: followUpAt
+                ? new Date(`${followUpAt}T09:00:00`).toISOString()
+                : null,
+            }
+          : {}),
       };
       return application
         ? api.patch(`/applications/${application.id}`, data)
         : api.post("/applications", data);
     },
     onSuccess: async () => {
-      await qc.invalidateQueries();
+      await invalidateUserQueries(qc, api.userId, [
+        "application",
+        "applications",
+        "dashboard",
+        "reminders",
+      ]);
       toast.success(application ? "Application updated" : "Application added");
       onClose();
     },
