@@ -1,5 +1,20 @@
 # Upgrade progress
 
+## Shared calendar and 30-day review — 2026-10-27
+
+Branch: `Test/calendar-workflow`. [Review and rollout](CALENDAR.md).
+
+- [x] Ten applications per page with existing filters, sorting and URL history
+- [x] Manual Applied review at 30 days, ten candidates per page, server eligibility/ownership rechecks, skipped results and timeline updates
+- [x] Shared OA/Interview/Other event form across Applications, Calendar and Overview; optional application/status update, date/zone/all-day handling and dashboard-only reminders
+- [x] Edit/reschedule/complete/cancel, category chips, Today/month controls, selected-day agenda, responsive light/dark layouts and reduced motion
+- [x] Additive Interview-table migration, deterministic follow-up conversion, retained legacy fields/history and disabled follow-up job creation/claims
+- [x] Disposable-database preservation/retry, concurrency/ownership/boundary/date tests and desktop/mobile browser journeys
+- [x] Local synthetic review preview; production unchanged
+- [ ] User review, isolated hosted preview credentials and staging-copy migration rehearsal before production approval
+
+Historical release records below describe previous versions.
+
 Branch: `Test/indigo-workspace`, based on the local SaaS upgrade at `b4030e8`. Original baseline: a354e1b.
 
 ## Indigo glass refresh

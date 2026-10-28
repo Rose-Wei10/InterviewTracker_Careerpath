@@ -40,7 +40,7 @@ describe("request boundaries", () => {
     expect(updateSchema.safeParse({}).success).toBe(false);
   });
   it("bounds pagination and date ranges", () => {
-    expect(listSchema.parse({}).pageSize).toBe(20);
+    expect(listSchema.parse({}).pageSize).toBe(10);
     for (const q of [
       { page: 0 },
       { pageSize: 101 },

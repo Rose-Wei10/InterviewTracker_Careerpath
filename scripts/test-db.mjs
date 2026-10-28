@@ -45,6 +45,7 @@ try {
   );
   const { Client } = await import("pg");
   const preserve = new Client({ connectionString: preserveUrl });
+  preserve.on("error", () => {});
   await preserve.connect();
   const sql = execFileSync(
     "./node_modules/.bin/prisma",
@@ -76,6 +77,62 @@ try {
     saved.rows[0].version !== 1
   )
     throw new Error("Migration preservation failed");
+  await preserve.query(`
+    INSERT INTO "JobApplication" (id,company,role,"userId","updatedAt","followUpAt",status) VALUES
+    ('active','Active','Engineer','legacy',now(),'2026-10-01 18:30:00','Applied'),
+    ('terminal','Terminal','Engineer','legacy',now(),'2026-10-02 18:30:00','Offer');
+    INSERT INTO "Interview" (id,"applicationId",title,"startsAt","timeZone",type,notes) VALUES
+    ('old-round','active','Original round','2026-12-01 18:00:00','America/Los_Angeles','video','Keep these notes');
+    INSERT INTO "Reminder" (id,"applicationId","interviewId",kind,"dueAt","dedupeKey",status) VALUES
+    ('old-round-reminder','active','old-round','interview','2026-12-01 17:00:00','round','pending'),
+    ('old-follow','active',NULL,'follow-up','2026-10-01 18:30:00','follow','processing'),
+    ('old-sent','active',NULL,'follow-up','2026-09-01 18:30:00','sent','sent');
+  `);
+  const calendarMigration = await readFile(
+    "server/prisma/migrations/20261027000000_calendar_events/migration.sql",
+    "utf8",
+  );
+  await preserve.query(calendarMigration);
+  await preserve.query(calendarMigration);
+  const rounds = (
+    await preserve.query(
+      `SELECT *, "startsAt" AT TIME ZONE 'UTC' AS "startsAt" FROM "Interview" ORDER BY id`,
+    )
+  ).rows;
+  if (
+    rounds.length !== 2 ||
+    rounds[0].id !== "legacy-follow-up:active" ||
+    rounds[0].startsAt.toISOString() !== "2026-10-01T18:30:00.000Z" ||
+    rounds[1].id !== "old-round" ||
+    rounds[1].userId !== "legacy" ||
+    rounds[1].notes !== "Keep these notes" ||
+    rounds[1].reminderMinutes !== 60 ||
+    rounds[1].startsAt.toISOString() !== "2026-12-01T18:00:00.000Z"
+  )
+    throw new Error(
+      "Calendar migration lost data or duplicated converted events",
+    );
+  const deliveries = (
+    await preserve.query('SELECT id,status FROM "Reminder" ORDER BY id')
+  ).rows;
+  if (
+    deliveries.length !== 3 ||
+    deliveries.find((v) => v.id === "old-follow").status !== "cancelled" ||
+    deliveries.find((v) => v.id === "old-sent").status !== "sent"
+  )
+    throw new Error("Legacy delivery preservation failed");
+  console.log(
+    "Calendar migration preserves IDs, notes, relationships and times; retries create no duplicates and retain delivery history.",
+  );
+  await run("./node_modules/.bin/prisma", [
+    "migrate",
+    "diff",
+    "--from-url",
+    preserveUrl,
+    "--to-schema-datamodel",
+    "server/prisma/schema.prisma",
+    "--exit-code",
+  ]);
   await preserve.end();
   console.log("Additive migration preserves legacy resume keys and URLs.");
   await run("./node_modules/.bin/prisma", [
@@ -86,6 +143,61 @@ try {
   ]);
   await run("npm", ["run", "test:integration"]);
   if (process.argv.includes("--e2e")) await run("npm", ["run", "test:e2e"]);
+  if (process.argv.includes("--preview")) {
+    const api = spawn(
+      "./node_modules/.bin/tsx",
+      ["server/tests/e2e-server.ts"],
+      { env, stdio: "inherit" },
+    );
+    const web = spawn(
+      "./node_modules/.bin/vite",
+      [
+        "--config",
+        "client/vite.config.ts",
+        "client",
+        "--mode",
+        "e2e",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "5179",
+        "--strictPort",
+      ],
+      {
+        env: {
+          ...env,
+          VITE_API_URL: "http://127.0.0.1:5019/api",
+          VITE_CLERK_PUBLISHABLE_KEY: "e2e-placeholder",
+        },
+        stdio: "inherit",
+      },
+    );
+    console.log(
+      "Synthetic review preview: http://127.0.0.1:5179 — Ctrl+C stops both servers and the disposable database.",
+    );
+    try {
+      await new Promise((resolve, reject) => {
+        process.once("SIGINT", resolve);
+        process.once("SIGTERM", resolve);
+        for (const child of [api, web]) {
+          child.once("error", reject);
+          child.once("exit", () => resolve());
+        }
+      });
+    } finally {
+      await Promise.all(
+        [api, web].map(
+          (child) =>
+            new Promise((resolve) => {
+              if (child.exitCode !== null || child.signalCode !== null)
+                return resolve();
+              child.once("exit", resolve);
+              child.kill("SIGTERM");
+            }),
+        ),
+      );
+    }
+  }
 } finally {
   await pg.stop();
 }

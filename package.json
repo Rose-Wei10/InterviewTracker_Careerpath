@@ -22,6 +22,7 @@
     "db:migrate": "npm exec -w server prisma migrate deploy",
     "test:db": "node scripts/test-db.mjs",
     "test:full": "node scripts/test-db.mjs --e2e",
+    "preview:review": "node scripts/test-db.mjs --e2e --preview",
     "format": "prettier --write client/src server/src server/tests client/tests e2e docs README.md"
   },
   "devDependencies": {

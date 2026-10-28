@@ -62,7 +62,9 @@ export async function listApplications(userId: string, input: unknown) {
   };
 }
 export async function createApplication(userId: string, input: unknown) {
-  const data = applicationSchema.parse(input);
+  const { followUpAt: _legacyFollowUp, ...data } =
+    applicationSchema.parse(input);
+  void _legacyFollowUp;
   await checkResume(userId, data.resumeId);
   return prisma.$transaction(async (tx) => {
     await tx.user.upsert({
@@ -80,17 +82,6 @@ export async function createApplication(userId: string, input: unknown) {
             metadata: { status: data.status },
           },
         },
-        ...(data.followUpAt
-          ? {
-              reminders: {
-                create: {
-                  dedupeKey: crypto.randomUUID(),
-                  kind: "follow-up",
-                  dueAt: data.followUpAt,
-                },
-              },
-            }
-          : {}),
       },
     });
   });
@@ -100,7 +91,8 @@ export async function updateApplication(
   id: string,
   input: unknown,
 ) {
-  const data = updateSchema.parse(input);
+  const { followUpAt: _legacyFollowUp, ...data } = updateSchema.parse(input);
+  void _legacyFollowUp;
   await checkResume(userId, data.resumeId);
   return prisma.$transaction(async (tx) => {
     const before = await tx.jobApplication.findFirst({ where: { id, userId } });
@@ -126,24 +118,6 @@ export async function updateApplication(
       await tx.activity.create({
         data: { applicationId: id, kind: "NOTES_UPDATED" },
       });
-    if (data.followUpAt !== undefined) {
-      await tx.reminder.deleteMany({
-        where: {
-          applicationId: id,
-          kind: "follow-up",
-          status: { not: "sent" },
-        },
-      });
-      if (data.followUpAt)
-        await tx.reminder.create({
-          data: {
-            applicationId: id,
-            kind: "follow-up",
-            dedupeKey: crypto.randomUUID(),
-            dueAt: data.followUpAt,
-          },
-        });
-    }
     return record;
   });
 }

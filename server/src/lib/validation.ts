@@ -43,7 +43,7 @@ export const updateSchema = applicationSchema
 export const listSchema = z
   .object({
     page: z.coerce.number().int().min(1).max(100000).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+    pageSize: z.coerce.number().int().min(1).max(100).default(10),
     search: z.string().trim().max(200).optional(),
     status: z.enum(statuses).optional(),
     location: z.string().trim().max(200).optional(),
@@ -84,3 +84,56 @@ export const interviewUpdateSchema = z
     notes: optionalText(10000),
   })
   .strict();
+
+export const eventSchema = z
+  .object({
+    applicationId: z.string().min(1).nullable().optional(),
+    category: z.enum(["OA", "Interview", "Other"]).default("Other"),
+    title: z.string().trim().min(1).max(200),
+    startsAt: z
+      .string()
+      .datetime({ offset: true })
+      .transform((v) => new Date(v)),
+    timeZone: interviewSchema.shape.timeZone,
+    allDay: z.boolean().default(false),
+    type: z
+      .enum(["phone", "video", "technical", "behavioral", "onsite", "other"])
+      .default("other"),
+    notes: optionalText(10000),
+    reminderMinutes: z
+      .number()
+      .int()
+      .min(0)
+      .max(10080)
+      .nullable()
+      .default(1440),
+    status: z
+      .enum(["Scheduled", "Completed", "Cancelled"])
+      .default("Scheduled"),
+    updateApplicationStatus: z.boolean().default(false),
+  })
+  .strict();
+export const eventUpdateSchema = eventSchema
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, "Provide at least one field");
+export const eventListSchema = z
+  .object({
+    from: z
+      .string()
+      .datetime({ offset: true })
+      .transform((v) => new Date(v)),
+    to: z
+      .string()
+      .datetime({ offset: true })
+      .transform((v) => new Date(v)),
+    page: z.coerce.number().int().min(1).max(100000).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(100),
+    applicationId: z.string().min(1).optional(),
+    category: z.enum(["OA", "Interview", "Other"]).optional(),
+  })
+  .strict()
+  .refine(
+    (v) =>
+      v.from <= v.to && v.to.getTime() - v.from.getTime() <= 370 * 86400000,
+    "Choose a range of at most one year",
+  );

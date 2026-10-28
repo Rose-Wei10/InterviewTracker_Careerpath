@@ -51,7 +51,7 @@ export async function processReminderBatch(
     const claimed = await prisma.$transaction(async (tx) => {
       const ids = await tx.$queryRaw<
         { id: string }[]
-      >`SELECT id FROM "Reminder" WHERE status = 'pending' AND "dueAt" <= NOW() ORDER BY "dueAt" FOR UPDATE SKIP LOCKED LIMIT 1`;
+      >`SELECT id FROM "Reminder" WHERE status = 'pending' AND kind <> 'follow-up' AND "dueAt" <= NOW() ORDER BY "dueAt" FOR UPDATE SKIP LOCKED LIMIT 1`;
       if (!ids[0]) return null;
       return tx.reminder.update({
         where: { id: ids[0].id },

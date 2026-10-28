@@ -1,16 +1,18 @@
 import { Link } from "react-router-dom";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, CalendarPlus } from "lucide-react";
 import { statuses } from "../../types";
 import type { Application, Status } from "../../types";
 export default function ApplicationsTable({
   applications,
   onEdit,
+  onSchedule,
   onDelete,
   onStatusChange,
   pendingId,
 }: {
   applications: Application[];
   onEdit: (a: Application) => void;
+  onSchedule?: (a: Application) => void;
   onDelete: (a: Application) => void;
   onStatusChange?: (id: string, status: Status) => void;
   pendingId?: string;
@@ -40,7 +42,9 @@ export default function ApplicationsTable({
                 </td>
                 <td data-label="Location">{a.location || "—"}</td>
                 <td data-label="Applied">
-                  {new Date(a.appliedDate).toLocaleDateString()}
+                  {new Date(
+                    a.appliedDate.slice(0, 10) + "T12:00:00",
+                  ).toLocaleDateString()}
                 </td>
                 <td data-label="Status">
                   {onStatusChange ? (
@@ -72,6 +76,15 @@ export default function ApplicationsTable({
                 <td data-label="Salary">{a.salary || "—"}</td>
                 <td data-label="Actions">
                   <div className="actions">
+                    {onSchedule && (
+                      <button
+                        aria-label={`Schedule event for ${a.company}`}
+                        className="icon-button"
+                        onClick={() => onSchedule(a)}
+                      >
+                        <CalendarPlus size={16} />
+                      </button>
+                    )}
                     <button
                       aria-label={`Edit ${a.company}`}
                       className="icon-button"

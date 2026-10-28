@@ -9,10 +9,16 @@ import { statuses } from "../types";
 import StatCards from "../components/dashboard/StatCards";
 import FunnelChart from "../components/dashboard/FunnelChart";
 import ActivityFeed from "../components/dashboard/ActivityFeed";
-import FollowUps from "../components/dashboard/FollowUps";
-import UpcomingInterviews from "../components/dashboard/UpcomingInterviews";
+import GhostReview from "../components/dashboard/GhostReview";
+import EventForm from "../components/events/EventForm";
+import EventList from "../components/events/EventList";
+import type { CalendarEvent } from "../types";
+
 import { Loading, ErrorState, Empty } from "../components/ui";
 export default function Dashboard() {
+  const [eventEditing, setEventEditing] = useState<
+    CalendarEvent | null | undefined
+  >(undefined);
   const api = useApi(),
     { user } = useUser();
   const [range, setRange] = useState("90"),
@@ -37,6 +43,7 @@ export default function Dashboard() {
   }
   const query = useQuery({
     queryKey: ["dashboard", api.userId, from, to],
+    refetchInterval: 60000,
     queryFn: () =>
       api.get<DashboardData>("/dashboard", { from: from || undefined, to }),
   });
@@ -53,9 +60,14 @@ export default function Dashboard() {
             turn opportunities into your next chapter.
           </p>
         </div>
-        <Link to="/applications?new=1" className="button primary">
-          <Plus size={17} /> Add application
-        </Link>
+        <div className="actions">
+          <button onClick={() => setEventEditing(null)}>
+            <Plus size={17} /> Add event
+          </button>
+          <Link to="/applications?new=1" className="button primary">
+            <Plus size={17} /> Add application
+          </Link>
+        </div>
       </div>
       <div className="section-heading overview-heading">
         <h2>Overview</h2>
@@ -161,16 +173,51 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="below-grid">
-            <FollowUps
-              items={query.data.followUps}
-              total={query.data.followUpCount}
-            />
-            <UpcomingInterviews data={query.data.upcoming} />
+            <section className="card">
+              <div className="section-heading">
+                <h2>
+                  Needs attention{" "}
+                  <span className="count">{query.data.attentionCount}</span>
+                </h2>
+              </div>
+              <p className="muted">
+                Due reminders and overdue unfinished events
+              </p>
+              <EventList
+                items={query.data.attention}
+                onEdit={setEventEditing}
+                empty="You're all caught up. No event reminders need attention."
+              />
+              {query.data.attentionCount > query.data.attention.length && (
+                <Link to="/calendar?view=attention">
+                  View all {query.data.attentionCount} events needing attention
+                  →
+                </Link>
+              )}
+            </section>
+            <section className="card">
+              <div className="section-heading">
+                <h2>
+                  Upcoming events{" "}
+                  <span className="count">{query.data.upcomingCount}</span>
+                </h2>
+                <Link to="/calendar">View calendar →</Link>
+              </div>
+              <p className="muted">Your next seven days</p>
+              <EventList items={query.data.upcoming} onEdit={setEventEditing} />
+            </section>
+            <GhostReview count={query.data.ghostCount} />
           </div>
           <div className="dashboard-activity">
             <ActivityFeed data={query.data.recent.slice(0, 4)} />
           </div>
         </>
+      )}
+      {eventEditing !== undefined && (
+        <EventForm
+          event={eventEditing ?? undefined}
+          onClose={() => setEventEditing(undefined)}
+        />
       )}
     </>
   );

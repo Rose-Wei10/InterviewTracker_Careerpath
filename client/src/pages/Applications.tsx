@@ -15,6 +15,8 @@ import { statuses } from "../types";
 import type { Application, Page, Status } from "../types";
 import ApplicationsTable from "../components/dashboard/ApplicationsTable";
 import AddApplicationModal from "../components/dashboard/AddApplicationModal";
+import EventForm from "../components/events/EventForm";
+import GhostReview from "../components/dashboard/GhostReview";
 import { Confirm, ErrorState, Loading } from "../components/ui";
 export default function Applications() {
   const api = useApi(),
@@ -24,6 +26,7 @@ export default function Applications() {
       params.get("new") ? null : undefined,
     ),
     [deleting, setDeleting] = useState<Application | null>(null);
+  const [scheduling, setScheduling] = useState<Application | null>(null);
   const search = params.get("search") ?? "";
   const [debounced, setDebounced] = useState(search);
   useEffect(() => {
@@ -39,7 +42,7 @@ export default function Applications() {
     sort: params.get("sort") || "appliedDate",
     direction: params.get("direction") || "desc",
     page: Number(params.get("page") || 1),
-    pageSize: 20,
+    pageSize: 10,
   };
   const query = useQuery({
     queryKey: ["applications", api.userId, filters],
@@ -62,7 +65,8 @@ export default function Applications() {
         "application",
         "dashboard",
         "interviews",
-        "reminders",
+        "events",
+        "ghost-review",
       ]);
       toast.success("Application deleted");
     },
@@ -76,6 +80,7 @@ export default function Applications() {
         "applications",
         "application",
         "dashboard",
+        "ghost-review",
       ]);
       toast.success("Status updated");
     },
@@ -117,7 +122,8 @@ export default function Applications() {
       await invalidateUserQueries(qc, api.userId, [
         "applications",
         "dashboard",
-        "reminders",
+        "events",
+        "ghost-review",
       ]);
     } catch (e) {
       toast.error(errorMessage(e));
@@ -137,6 +143,7 @@ export default function Applications() {
           <Plus size={17} /> Add application
         </button>
       </div>
+      <GhostReview />
       <section className="card">
         <div className="section-heading">
           <h2>
@@ -263,6 +270,7 @@ export default function Applications() {
           <>
             <ApplicationsTable
               applications={query.data.items}
+              onSchedule={setScheduling}
               onEdit={setEditing}
               onDelete={setDeleting}
               onStatusChange={(id, status) =>
@@ -303,6 +311,12 @@ export default function Applications() {
           </>
         )}
       </section>
+      {scheduling && (
+        <EventForm
+          application={scheduling}
+          onClose={() => setScheduling(null)}
+        />
+      )}
       {editing !== undefined && (
         <AddApplicationModal
           application={editing}

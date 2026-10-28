@@ -2,30 +2,31 @@
 
 A full-stack job-search workspace for organizing applications, preparing for interviews, and understanding recruiting progress. Built with React, TypeScript, Express, PostgreSQL, Prisma, Clerk and AWS integrations.
 
-The upgrade preserves the existing application's data model and resume object keys. It adds validated, user-scoped APIs, a responsive dashboard, structured activity history, interview scheduling, durable reminders, and evidence-linked resume matching.
+The upgrade preserves the existing application's data model and resume object keys. It adds validated, user-scoped APIs, a responsive dashboard, structured activity history, shared calendar events, dashboard reminders, and evidence-linked resume matching.
 
 ## Features
 
 - **Workspace:** indigo/lavender light theme, navy dark theme, frosted navigation, readable content cards, responsive application cards and accessible dialogs.
-- **Dashboard:** date filters, totals for all seven statuses, weekly/monthly trends, current-stage distribution, explicitly labeled status-based response/interview rate proxies, upcoming interviews, linked recent activity and a follow-up action center. Totals/offers/stages open filtered applications while preserving the analytics date range. Statistics come from the signed-in user's database records.
-- **Applications:** create, edit, detail and delete; company/role search; location/status/date filters; sorting; bounded server pagination; notes, salary, HTTP(S) job links, resume selection and follow-up dates; quick status updates, removable filter chips and reset filters. Search remains synchronized with browser history.
+- **Dashboard:** date filters, totals for all seven statuses, weekly/monthly trends, current-stage distribution, explicitly labeled status-based response/interview rate proxies, upcoming events, needs-attention reminders, linked recent activity and a manual 30-day Applied review. Totals/offers/stages open filtered applications while preserving the analytics date range. Statistics come from the signed-in user's database records.
+- **Applications:** create, edit, detail and delete; company/role search; location/status/date filters; sorting; 10 rows per page; notes, salary, HTTP(S) job links, resume selection and event scheduling; quick status updates, removable filter chips and reset filters. Search remains synchronized with browser history.
 - **CSV:** transactional imports of up to 500 rows and filtered exports of up to 10,000 rows; invalid batches fail without partial imports; formula-leading export cells are escaped.
 - **Resume library:** named PDF versions, 5 MB limit, PDF signature validation, private S3 objects, one-minute presigned downloads and ownership checks. Legacy object keys/URLs remain in the database; legacy URLs are no longer returned by list endpoints.
 - **Resume match:** select a stored PDF, paste a job description, save and delete analysis history. The default **demo** is a local keyword comparison, clearly labeled as not AI. An optional OpenAI-compatible provider adds evidence-linked coaching. Matching percentages are heuristics, never ATS scores or hiring predictions.
-- **Interview rounds:** UTC timestamps plus IANA zones, interview type, notes, status, monthly calendar, configurable reminder lead times, and completion events.
-- **Reminders:** PostgreSQL-backed worker with transactionally created jobs, unique deduplication keys, concurrent claims with `FOR UPDATE SKIP LOCKED`, leases, retry backoff and visible delivery status. Console mode does not send email; SES sends only to the account's verified primary Clerk email.
+- **Calendar:** OA, Interview and Other events, with optional application links; timed events in the viewer's local zone and all-day deadlines that keep their saved date; editing, rescheduling, completion and cancellation through one shared form.
+- **Dashboard reminders:** one day, one hour, 15 minutes or None. Upcoming events cover seven days; Needs attention includes due reminders and overdue unfinished events regardless of analytics dates. No delivery service or worker is needed; open the app to see reminders.
+- **30-day review:** select eligible Applied applications manually, ten per page. The server rechecks ownership, age and current status before marking selected records Ghosted and recording activity.
 - **UI:** reusable dialogs, native focus handling, labeled inputs, responsive navigation, light/dark mode, toast feedback, skeletons, actionable empty/error states and delete confirmation.
 
 ## Screenshots
 
-Screenshots are generated against isolated browser-test records, not private user data.
+Screenshots below show the previous release. Current review screenshots are generated under `test-results/preview` from isolated browser-test records.
 
 ![Desktop overview](docs/screenshots/dashboard-desktop.png)
 ![Mobile overview](docs/screenshots/dashboard-mobile.png)
 
 ## Stack and architecture
 
-React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Tailwind CSS 4, Recharts and Lucide. Express 5 + TypeScript, Zod, Prisma 5 + PostgreSQL, Clerk, AWS SDK v3 S3/SES, and a standalone reminder worker. Vitest, Testing Library, Supertest, Playwright and GitHub Actions cover quality checks.
+React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Tailwind CSS 4, Recharts and Lucide. Express 5 + TypeScript, Zod, Prisma 5 + PostgreSQL, Clerk, AWS SDK v3 S3/SES, and retained legacy reminder history. Vitest, Testing Library, Supertest, Playwright and GitHub Actions cover quality checks.
 
 ```mermaid
 flowchart LR
@@ -35,8 +36,6 @@ flowchart LR
   API -->|Private PDF objects| S3[AWS S3]
   API --> Extract[Bounded PDF parsing worker]
   Extract --> Match[Demo or compatible AI provider]
-  DB --> Worker[Reminder worker / SKIP LOCKED]
-  Worker -->|Verified primary email| SES[Console or AWS SES]
 ```
 
 `client/src/pages` owns page workflows, `components` owns reusable views/forms, `hooks/useApi` retrieves a fresh Clerk token for each request, and TanStack Query caches data under keys containing the user ID. Pages are loaded on demand and chart/auth dependencies are separate production chunks.
@@ -45,19 +44,19 @@ flowchart LR
 
 ### Database relationships
 
-| Model          | Purpose                                                                                               |
-| -------------- | ----------------------------------------------------------------------------------------------------- |
-| User           | Clerk ID as primary key; optional legacy email retained                                               |
-| JobApplication | Owner, opportunity details, current status, optional resume and follow-up date                        |
-| Resume         | Owner, preserved S3 object key/legacy URL, name, description, version and optional file metadata      |
-| Activity       | Structured kind and JSON transition metadata tied to an application                                   |
-| Interview      | Multiple rounds per application; UTC instant, IANA zone, notes/type/status                            |
-| Reminder       | Durable due time, unique dedupe key, attempts, lease, delivery state and receipt                      |
-| Analysis       | Owner/resume, job description, mode, result and creation date; incomplete attempts count toward quota |
+| Model          | Purpose                                                                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| User           | Clerk ID as primary key; optional legacy email retained                                                                                  |
+| JobApplication | Owner, opportunity details, current status, optional resume and retained legacy follow-up date                                           |
+| Resume         | Owner, preserved S3 object key/legacy URL, name, description, version and optional file metadata                                         |
+| Activity       | Structured kind and JSON transition metadata tied to an application                                                                      |
+| Interview      | Owner-scoped calendar events; optional application, category, all-day flag, UTC instant, IANA zone, notes/status and dashboard lead time |
+| Reminder       | Durable due time, unique dedupe key, attempts, lease, delivery state and receipt                                                         |
+| Analysis       | Owner/resume, job description, mode, result and creation date; incomplete attempts count toward quota                                    |
 
 Owner/date and owner/status indexes support scoped lists. Application deletion cascades dependent timeline/rounds/reminders. Resume deletion clears application selection and deletes associated analyses. The migration adds tables/nullable columns/defaults without deleting existing records or object keys.
 
-The dashboard response includes `followUps: [{id, company, role, followUpAt}]` and `followUpCount`. It returns the earliest ten active-application follow-ups due within seven days (including overdue), excluding Offer, Reject and Ghosted stages. Follow-ups and upcoming interviews are independent of the historical analytics filter. Clearing/rescheduling uses the existing application PATCH endpoint. The refresh adds no database migration or dependency.
+The dashboard returns `upcoming`, `upcomingCount`, `attention`, `attentionCount` and `ghostCount`, independent of analytics date filters. Event lists are date-bounded and paginated. Existing interview routes remain compatibility adapters for linked Interview events. Follow-up fields and delivery history remain stored for rollback; new writes ignore legacy follow-up dates and create no delivery jobs. See [calendar rollout and preview](docs/CALENDAR.md).
 
 ## Local setup
 
@@ -96,14 +95,13 @@ npm run db:migrate
 
 For an existing database, follow [the migration runbook](docs/DEPLOYMENT.md#existing-database-upgrade) first. Do not run reset, force-push or replay unapplied historical migrations against existing resume data.
 
-Start the frontend/API and, separately, the worker:
+Start the frontend/API:
 
 ```sh
 npm run dev
-npm run worker -w server
 ```
 
-Open `http://localhost:5173`. API liveness is `http://localhost:5001/health`; `/ready` checks the database. Reminder polling occurs every 15 seconds. In console mode jobs are marked `previewed` and no email is sent or personal message content logged.
+Open `http://localhost:5173`. API liveness is `http://localhost:5001/health`; `/ready` checks the database. Dashboard cards refresh every minute and when relevant data changes. Dashboard reminders require opening the app; no worker is needed.
 
 ### External services
 
@@ -119,23 +117,27 @@ Open `http://localhost:5173`. API liveness is `http://localhost:5001/health`; `/
 
 Bearer authentication is required for `/api/*`. Errors use `{message, errors?: [{field,message}]}` with appropriate HTTP status; successful creates use 201 and deletes 204. List responses use `{items,total,page,pageSize,totalPages}` for applications. Maximum page size is 100. Resume lists show at most 200 versions, interview lists at most 500 rounds, analysis history at most 50 attempts, and per-application timeline at most 200 events.
 
-| Endpoint                                        | Methods / behavior                                                      |
-| ----------------------------------------------- | ----------------------------------------------------------------------- |
-| `/api/applications`                             | GET paginated list; POST create                                         |
-| `/api/applications/:id`                         | GET detail with timeline/rounds; PUT or PATCH partial update; DELETE    |
-| `/api/applications/import`                      | POST `{csv}`; atomic validation/import                                  |
-| `/api/applications/export`                      | GET filtered CSV                                                        |
-| `/api/applications/:id/interviews`              | POST round and optional reminder                                        |
-| `/api/applications/:id/interviews/:interviewId` | PATCH round status/notes                                                |
-| `/api/dashboard`                                | GET scoped aggregates; `from`/`to` date filters; bounded follow-ups     |
-| `/api/interviews`                               | GET owned calendar rounds                                               |
-| `/api/reminders`                                | GET owned delivery statuses                                             |
-| `/api/resumes`                                  | GET metadata; POST multipart `resume`, `name`, `description`, `version` |
-| `/api/resumes/:id/download`                     | GET one-minute presigned private URL                                    |
-| `/api/resumes/:id`                              | DELETE object and record                                                |
-| `/api/analyses/config`                          | GET mode, provider origin/model and daily quota                         |
-| `/api/analyses`                                 | GET history; POST `{resumeId,jobDescription,consent}`                   |
-| `/api/analyses/:id`                             | DELETE history                                                          |
+| Endpoint                                        | Methods / behavior                                                                                         |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/api/applications`                             | GET paginated list; POST create                                                                            |
+| `/api/applications/:id`                         | GET detail with timeline/rounds; PUT or PATCH partial update; DELETE                                       |
+| `/api/applications/import`                      | POST `{csv}`; atomic validation/import                                                                     |
+| `/api/applications/export`                      | GET filtered CSV                                                                                           |
+| `/api/applications/:id/interviews`              | POST linked Interview event; dashboard reminder only                                                       |
+| `/api/applications/:id/interviews/:interviewId` | PATCH round status/notes                                                                                   |
+| `/api/dashboard`                                | GET scoped aggregates; `from`/`to` analytics filters; independent event/review cards                       |
+| `/api/interviews`                               | GET linked Interview events (legacy adapter)                                                               |
+| `/api/events`                                   | GET required ISO `from`/`to` (range <=370 days), optional application/category, page/pageSize; POST create |
+| `/api/events/:id`                               | GET or PATCH owned event                                                                                   |
+| `/api/events/attention`                         | GET unfinished due/overdue events, ten per page                                                            |
+| `/api/applications/ghost-review`                | GET candidates, ten per page; POST `{ids}` (1-10), returns updatedIds/skippedIds                           |
+| `/api/reminders`                                | GET owned delivery statuses                                                                                |
+| `/api/resumes`                                  | GET metadata; POST multipart `resume`, `name`, `description`, `version`                                    |
+| `/api/resumes/:id/download`                     | GET one-minute presigned private URL                                                                       |
+| `/api/resumes/:id`                              | DELETE object and record                                                                                   |
+| `/api/analyses/config`                          | GET mode, provider origin/model and daily quota                                                            |
+| `/api/analyses`                                 | GET history; POST `{resumeId,jobDescription,consent}`                                                      |
+| `/api/analyses/:id`                             | DELETE history                                                                                             |
 
 Application list/export filters: `search`, `status`, `location`, `from`, `to`, `sort`, `direction`, `page`, `pageSize`. Sort fields are allowlisted. Status strings remain compatible with existing data: Applied, OA, Interview, Final Round, Offer, Reject, Ghosted.
 
@@ -163,7 +165,7 @@ Docker targets for frontend/API, a separate worker process, local Compose and CI
 
 - No production deployment or usage metrics are claimed. Hosted authentication, storage policy, managed DB connectivity, SES delivery and live model output need a staging acceptance pass after external configuration.
 - Rates are **current-status proxies**, not reconstructed historical funnels. A rejection after an old interview cannot be inferred. New transitions are recorded in the timeline, but historical records are not fabricated.
-- Calendar dates use the device zone; detail pages retain each round's IANA zone. Repeated/skipped daylight-saving times should be checked after scheduling. Round status/notes can be updated; to change the time, cancel the round and create its replacement.
+- Calendar dates use the device zone; detail pages retain each round's IANA zone. Repeated/skipped daylight-saving times should be checked after scheduling. Event time, zone, application, notes and status can be edited in place.
 - SES has no exactly-once send API. Explicit throttling/service rejection retries with exponential backoff (up to five attempts); ambiguous or expired in-flight deliveries become `uncertain` for manual reconciliation instead of automatic duplication.
 - Local PDF extraction has a worker memory/time budget and requires readable text. OCR, antivirus scanning, encrypted PDF support and very large libraries are future work.
 - Global API rate limits use an in-memory IP store; deploy one API replica behind a controlled proxy until a shared limiter is configured. Analysis usage and reminder coordination are durable across processes.

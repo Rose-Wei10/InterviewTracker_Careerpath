@@ -1,5 +1,9 @@
 # Deployment, migration and rollback
 
+## Calendar release gate
+
+The calendar feature is prepared on `Test/calendar-workflow`. Follow [the calendar preview/migration checklist](CALENDAR.md) before release. Do not push this branch to the connected Vercel repository until preview database isolation is configured: the API build runs migrations, and a Preview environment that shares the production database could migrate production before approval.
+
 ## Vercel deployment
 
 The frontend project uses root `client` (Vite), and the API uses root `server` (Express). Both track `InterviewTracker_Careerpath/main`. Frontend SPA rewrites are in `client/vercel.json`; `server/src/app.ts` exports the API without starting a persistent listener. The API build generates Prisma and applies the migration chain to the newly provisioned, empty managed database before compiling. Do not reuse that build migration strategy against an unknown existing database.

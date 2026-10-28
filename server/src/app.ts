@@ -6,6 +6,7 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { clerkMiddleware } from "@clerk/express";
+import eventRoutes from "./routes/eventRoutes";
 import applicationRoutes from "./routes/applicationRoutes";
 import dashboardRoutes from "./routes/dashboard";
 import resumeRoutes from "./routes/resumeRoutes";
@@ -68,6 +69,7 @@ export function createApp(
     res.set("Cache-Control", "no-store");
     next();
   });
+  app.use("/api/events", eventRoutes);
   app.use("/api/applications", applicationRoutes);
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/resumes", resumeRoutes);
@@ -75,7 +77,11 @@ export function createApp(
   app.get("/api/interviews", async (_req, res) =>
     res.json(
       await prisma.interview.findMany({
-        where: { application: { userId: res.locals.userId } },
+        where: {
+          userId: res.locals.userId,
+          category: "Interview",
+          applicationId: { not: null },
+        },
         orderBy: { startsAt: "asc" },
         take: 500,
         include: {

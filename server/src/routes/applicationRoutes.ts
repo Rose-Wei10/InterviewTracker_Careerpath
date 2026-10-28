@@ -15,11 +15,19 @@ import {
 } from "../lib/validation";
 import { HttpError } from "../lib/errors";
 import { z } from "zod";
+import { ghostReview, markGhosted } from "../services/ghostReview";
+import { saveEvent } from "../services/events";
 import { parse } from "csv-parse/sync";
 const router = Router();
 router.get("/", async (req, res) => {
   res.json(await listApplications(res.locals.userId, req.query));
 });
+router.get("/ghost-review", async (req, res) =>
+  res.json(await ghostReview(res.locals.userId, req.query)),
+);
+router.post("/ghost-review", async (req, res) =>
+  res.json(await markGhosted(res.locals.userId, req.body)),
+);
 const csvFields = [
   "company",
   "role",
@@ -88,7 +96,8 @@ router.post("/import", async (req, res) => {
       create: { id: res.locals.userId },
       update: {},
     });
-    for (const row of data) {
+    for (const { followUpAt: _legacyFollowUp, ...row } of data) {
+      void _legacyFollowUp;
       if (row.resumeId)
         throw new HttpError(400, "CSV import does not accept resume IDs");
       await tx.jobApplication.create({
@@ -101,17 +110,6 @@ router.post("/import", async (req, res) => {
               metadata: { source: "csv" },
             },
           },
-          ...(row.followUpAt
-            ? {
-                reminders: {
-                  create: {
-                    kind: "follow-up",
-                    dueAt: row.followUpAt,
-                    dedupeKey: crypto.randomUUID(),
-                  },
-                },
-              }
-            : {}),
         },
       });
     }
@@ -122,17 +120,28 @@ router.post("/", async (req, res) => {
   res.status(201).json(await createApplication(res.locals.userId, req.body));
 });
 router.get("/:id", async (req, res) => {
-  await ownApplication(res.locals.userId, String(req.params.id));
-  res.json(
-    await prisma.jobApplication.findFirst({
-      where: { id: String(req.params.id), userId: res.locals.userId },
-      include: {
-        activities: { orderBy: { createdAt: "desc" }, take: 200 },
-        interviews: { orderBy: { startsAt: "asc" } },
-        resume: { select: { id: true, name: true } },
+  const id = String(req.params.id),
+    userId = String(res.locals.userId);
+  await ownApplication(userId, id);
+  const application = await prisma.jobApplication.findFirstOrThrow({
+    where: { id, userId },
+    include: {
+      activities: { orderBy: { createdAt: "desc" }, take: 200 },
+      interviews: {
+        where: { category: "Interview" },
+        orderBy: { startsAt: "asc" },
       },
-    }),
-  );
+      resume: { select: { id: true, name: true } },
+    },
+  });
+  const events = await prisma.interview.findMany({
+    where: { applicationId: id, userId },
+    orderBy: { startsAt: "asc" },
+    include: {
+      application: { select: { id: true, company: true, role: true } },
+    },
+  });
+  res.json({ ...application, events });
 });
 router.put("/:id", async (req, res) => {
   res.json(
@@ -155,61 +164,30 @@ router.post("/:id/interviews", async (req, res) => {
   const data = interviewSchema.parse(req.body);
   const id = String(req.params.id);
   await ownApplication(res.locals.userId, id);
-  const { reminderMinutes, ...fields } = data;
-  const interview = await prisma.$transaction(async (tx) => {
-    const record = await tx.interview.create({
-      data: { ...fields, applicationId: id },
-    });
-    await tx.activity.create({
-      data: {
+  res
+    .status(201)
+    .json(
+      await saveEvent(res.locals.userId, {
+        ...data,
+        startsAt: data.startsAt.toISOString(),
+        category: "Interview",
         applicationId: id,
-        kind: "INTERVIEW_SCHEDULED",
-        metadata: {
-          interviewId: record.id,
-          startsAt: record.startsAt.toISOString(),
-        },
-      },
-    });
-    if (reminderMinutes != null)
-      await tx.reminder.create({
-        data: {
-          applicationId: id,
-          interviewId: record.id,
-          kind: "interview",
-          dedupeKey: `interview:${record.id}`,
-          dueAt: new Date(record.startsAt.getTime() - reminderMinutes * 60000),
-        },
-      });
-    return record;
-  });
-  res.status(201).json(interview);
+      }),
+    );
 });
 router.patch("/:id/interviews/:interviewId", async (req, res) => {
   const data = interviewUpdateSchema.parse(req.body),
     id = String(req.params.id);
   await ownApplication(res.locals.userId, id);
-  res.json(
-    await prisma.$transaction(async (tx) => {
-      const record = await tx.interview.update({
-        where: { id: String(req.params.interviewId), applicationId: id },
-        data,
-      });
-      if (data.status !== "Scheduled")
-        await tx.reminder.deleteMany({
-          where: { interviewId: record.id, status: { not: "sent" } },
-        });
-      await tx.activity.create({
-        data: {
-          applicationId: id,
-          kind:
-            data.status === "Completed"
-              ? "INTERVIEW_COMPLETED"
-              : "INTERVIEW_UPDATED",
-          metadata: { status: data.status },
-        },
-      });
-      return record;
-    }),
-  );
+  const event = await prisma.interview.findFirst({
+    where: {
+      id: String(req.params.interviewId),
+      applicationId: id,
+      userId: res.locals.userId,
+      category: "Interview",
+    },
+  });
+  if (!event) throw new HttpError(404, "Event not found");
+  res.json(await saveEvent(res.locals.userId, data, event.id));
 });
 export default router;

@@ -11,6 +11,7 @@ model User {
   applications JobApplication[]
   resumes Resume[]
   analyses Analysis[]
+  events Interview[]
 }
 model JobApplication {
   id String @id @default(cuid())
@@ -62,17 +63,22 @@ model Activity {
 }
 model Interview {
   id String @id @default(cuid())
-  applicationId String
+  userId String
+  category String @default("Interview")
+  allDay Boolean @default(false)
+  reminderMinutes Int? @default(1440)
+  applicationId String?
   title String
   startsAt DateTime
   timeZone String
-  type String
+  type String @default("other")
   status String @default("Scheduled")
   notes String?
   createdAt DateTime @default(now())
-  application JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  application JobApplication? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   reminders Reminder[]
-  @@index([startsAt, status])
+  @@index([userId, startsAt, status])
   @@index([applicationId])
 }
 model Reminder {

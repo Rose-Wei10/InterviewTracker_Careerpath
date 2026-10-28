@@ -16,9 +16,6 @@ export default function AddApplicationModal({
 }) {
   const api = useApi(),
     qc = useQueryClient();
-  const savedFollowUpDate = application?.followUpAt
-    ? new Date(application.followUpAt).toLocaleDateString("en-CA")
-    : "";
   const [form, setForm] = useState({
     company: application?.company ?? "",
     role: application?.role ?? "",
@@ -31,7 +28,6 @@ export default function AddApplicationModal({
     jobLink: application?.jobLink ?? "",
     notes: application?.notes ?? "",
     resumeId: application?.resumeId ?? "",
-    followUpAt: savedFollowUpDate,
   });
   const resumes = useQuery({
     queryKey: ["resumes", api.userId],
@@ -39,22 +35,14 @@ export default function AddApplicationModal({
   });
   const mutation = useMutation({
     mutationFn: () => {
-      const { followUpAt, ...fields } = form;
       const data = {
-        ...fields,
+        ...form,
         resumeId: form.resumeId || null,
         appliedDate:
           application &&
           form.appliedDate === application.appliedDate.slice(0, 10)
             ? application.appliedDate
             : new Date(form.appliedDate).toISOString(),
-        ...(!application || followUpAt !== savedFollowUpDate
-          ? {
-              followUpAt: followUpAt
-                ? new Date(`${followUpAt}T09:00:00`).toISOString()
-                : null,
-            }
-          : {}),
       };
       return application
         ? api.patch(`/applications/${application.id}`, data)
@@ -65,7 +53,6 @@ export default function AddApplicationModal({
         "application",
         "applications",
         "dashboard",
-        "reminders",
       ]);
       toast.success(application ? "Application updated" : "Application added");
       onClose();
@@ -140,15 +127,6 @@ export default function AddApplicationModal({
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            Follow-up date (9am local)
-            <input
-              type="date"
-              name="followUpAt"
-              value={form.followUpAt}
-              onChange={change}
-            />
           </label>
           <label className="full-width">
             Notes

@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-query";
 import "@testing-library/jest-dom/vitest";
 import Applications from "../src/pages/Applications";
-import FollowUps from "../src/components/dashboard/FollowUps";
+
 import { invalidateUserQueries } from "../src/services/queryCache";
 import type { Application } from "../src/types";
 const { api, notify } = vi.hoisted(() => ({
@@ -44,12 +44,18 @@ function mount(path = "/applications") {
 }
 beforeEach(() => {
   vi.resetAllMocks();
-  api.get.mockResolvedValue({
-    items: [application],
-    total: 1,
-    page: 1,
-    totalPages: 1,
-  });
+  api.get.mockImplementation((path: string) =>
+    Promise.resolve(
+      path === "/applications/ghost-review"
+        ? { items: [], total: 0, page: 1, totalPages: 1 }
+        : {
+            items: [application],
+            total: 1,
+            page: 1,
+            totalPages: 1,
+          },
+    ),
+  );
 });
 afterEach(() => {
   cleanup();
@@ -70,7 +76,7 @@ describe("application interactions", () => {
     await user.click(screen.getByRole("button", { name: "Reset filters" }));
     expect(screen.getByPlaceholderText("Company or role…")).toHaveValue("");
     await waitFor(() =>
-      expect(api.get).toHaveBeenLastCalledWith(
+      expect(api.get).toHaveBeenCalledWith(
         "/applications",
         expect.objectContaining({
           search: undefined,
@@ -124,36 +130,6 @@ describe("application interactions", () => {
     expect(select).toHaveValue("Applied");
     expect(select).toBeEnabled();
   });
-});
-it("shows a helpful action-center empty state and links overdue follow-ups", () => {
-  const view = render(
-    <MemoryRouter>
-      <FollowUps items={[]} total={0} />
-    </MemoryRouter>,
-  );
-  expect(screen.getByText("You’re all caught up")).toBeVisible();
-  view.rerender(
-    <MemoryRouter>
-      <FollowUps
-        items={[
-          {
-            id: "one",
-            company: "Acme",
-            role: "Engineer",
-            followUpAt: "2000-01-01T09:00:00Z",
-          },
-        ]}
-        total={12}
-      />
-    </MemoryRouter>,
-  );
-  expect(screen.getByText("Overdue")).toBeVisible();
-  expect(
-    screen.getByRole("link", { name: "Manage follow-up for Acme" }),
-  ).toHaveAttribute("href", "/applications/one?edit=1");
-  expect(
-    screen.getByText("Showing the earliest 1 of 12 follow-ups."),
-  ).toBeVisible();
 });
 it("refetches only affected user queries instead of every active query", async () => {
   const client = new QueryClient({

@@ -19,11 +19,11 @@ export interface Application {
   jobLink?: string | null;
   notes?: string | null;
   resumeId?: string | null;
-  followUpAt?: string | null;
   createdAt: string;
   updatedAt: string;
   activities?: Activity[];
   interviews?: Interview[];
+  events?: CalendarEvent[];
   resume?: { id: string; name: string } | null;
 }
 export interface Activity {
@@ -68,14 +68,11 @@ export interface DashboardData {
   interviewRate: number;
   rateLabel: string;
   recent: Activity[];
-  upcoming: Interview[];
-  followUps: {
-    id: string;
-    company: string;
-    role: string;
-    followUpAt: string;
-  }[];
-  followUpCount: number;
+  upcoming: CalendarEvent[];
+  upcomingCount: number;
+  attention: CalendarEvent[];
+  attentionCount: number;
+  ghostCount: number;
   weekly: { date: string; count: number }[];
   monthly: { date: string; count: number }[];
 }
@@ -93,4 +90,23 @@ export interface Analysis {
   createdAt: string;
   result: AnalysisResult | null;
   resume: { name: string };
+}
+
+export type EventCategory = "OA" | "Interview" | "Other";
+export interface CalendarEvent {
+  id: string;
+  applicationId: string | null;
+  application?: { id: string; company: string; role: string } | null;
+  title: string;
+  category: EventCategory;
+  startsAt: string;
+  timeZone: string;
+  allDay: boolean;
+  type: string;
+  notes?: string | null;
+  status: "Scheduled" | "Completed" | "Cancelled";
+  reminderMinutes: number | null;
+  needsAttention?: boolean;
+  overdue?: boolean;
+  reminderAt?: string | null;
 }

@@ -40,7 +40,7 @@ export default function Layout() {
             <BriefcaseBusiness size={18} /> Applications
           </NavLink>
           <NavLink to="/calendar">
-            <CalendarDays size={18} /> Interviews
+            <CalendarDays size={18} /> Calendar
           </NavLink>
           <NavLink to="/resumes">
             <Files size={18} /> Resumes

@@ -1,5 +1,18 @@
 # Verification record
 
+## Shared calendar and review — 2026-10-27
+
+- `npm run check`: lint, strict client/server types, 23 unit/component/PDF tests and both production builds pass locally on macOS arm64 / Node 26.12.1.
+- `npm run preview:review`: disposable PostgreSQL, 20 API integration tests and six Chromium journeys pass; the synthetic review workspace stays available on loopback after testing.
+- Preservation fixture applies the calendar migration twice and verifies original Interview IDs, timestamps, notes, ownership, relationships, old reminder lead, one deterministic active follow-up conversion, terminal exclusion, cancellation without history deletion, and preserved resume keys/URLs.
+- API coverage includes 21 applications across three pages; exact 30-day and millisecond boundaries; cross-user/mixed/stale/concurrent reviews; linked/standalone events; explicit status opt-in; owner-scoped reads/updates/relinks; bounded event listing and attention pagination; exact lead/seven-day boundaries; completion/cancellation; filter-independent cards; all-day next-midnight deadlines across spring/fall daylight-saving transitions.
+- Browser coverage includes shared form synchronization across all three pages, per-page review selection reset, mobile event creation/editing/rescheduling/status changes, date-prefilled calendar actions, rejected nonexistent DST hours, preservation of a repeated-hour instant including seconds/milliseconds, URL history, keyboard Escape/focus restoration and responsive light/dark layouts at 390/768/1440 px. Screenshots use synthetic records under `test-results/preview/`.
+- Follow-up controls/panels are absent from client source. Creation/import no longer queue deliveries; worker claim tests exclude legacy follow-ups. New reminders are dashboard-only.
+
+Not checked: real devices or Safari/Firefox, hosted Clerk/storage/provider acceptance, production-schema drift/staging-copy rehearsal or production load. Existing dependency advisories remain separate. No production migration/deployment or paid service was performed. [Review and release gate](CALENDAR.md).
+
+Historical verification follows.
+
 ## Indigo glass refresh — 2026-10-24
 
 Local macOS arm64 verification on Node 26.12.1, based on `b4030e8`:

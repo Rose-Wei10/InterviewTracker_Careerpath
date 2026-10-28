@@ -1,19 +1,15 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma";
+import { ghostWhere } from "../services/ghostReview";
+import { eventPanels } from "../services/events";
 import { listSchema, statuses } from "../lib/validation";
 import { applicationWhere } from "../services/applications";
 export async function getDashboardStats(req: Request, res: Response) {
   const q = listSchema.parse(req.query),
     where = applicationWhere(res.locals.userId, q);
   const userId = String(res.locals.userId);
-  const now = new Date();
-  const followUpWhere: Prisma.JobApplicationWhereInput = {
-    userId,
-    status: { notIn: ["Offer", "Reject", "Ghosted"] },
-    followUpAt: { lte: new Date(now.getTime() + 7 * 86400000) },
-  };
-  const [groups, recent, upcoming, trends, monthly, followUps, followUpCount] =
+  const [groups, recent, panels, trends, monthly, ghostCount] =
     await Promise.all([
       prisma.jobApplication.groupBy({
         by: ["status"],
@@ -28,18 +24,7 @@ export async function getDashboardStats(req: Request, res: Response) {
           application: { select: { id: true, company: true, role: true } },
         },
       }),
-      prisma.interview.findMany({
-        where: {
-          application: { userId },
-          status: "Scheduled",
-          startsAt: { gte: now },
-        },
-        orderBy: { startsAt: "asc" },
-        take: 10,
-        include: {
-          application: { select: { id: true, company: true, role: true } },
-        },
-      }),
+      eventPanels(userId),
       prisma.$queryRaw<Array<{ week: Date; count: bigint }>>(Prisma.sql`
       SELECT date_trunc('week', "appliedDate") AS week, COUNT(*) AS count FROM "JobApplication"
       WHERE "userId" = ${userId} AND (${q.from ?? null}::timestamp IS NULL OR "appliedDate" >= ${q.from ?? null}::timestamp) AND (${q.to ?? null}::timestamp IS NULL OR "appliedDate" <= ${q.to ?? null}::timestamp)
@@ -47,13 +32,7 @@ export async function getDashboardStats(req: Request, res: Response) {
       prisma.$queryRaw<Array<{ month: Date; count: bigint }>>(
         Prisma.sql`SELECT date_trunc('month', "appliedDate") AS month, COUNT(*) AS count FROM "JobApplication" WHERE "userId" = ${userId} AND (${q.from ?? null}::timestamp IS NULL OR "appliedDate" >= ${q.from ?? null}::timestamp) AND (${q.to ?? null}::timestamp IS NULL OR "appliedDate" <= ${q.to ?? null}::timestamp) GROUP BY month ORDER BY month`,
       ),
-      prisma.jobApplication.findMany({
-        where: followUpWhere,
-        orderBy: [{ followUpAt: "asc" }, { id: "asc" }],
-        take: 10,
-        select: { id: true, company: true, role: true, followUpAt: true },
-      }),
-      prisma.jobApplication.count({ where: followUpWhere }),
+      prisma.jobApplication.count({ where: ghostWhere(userId) }),
     ]);
   const counts = Object.fromEntries(
     statuses.map((s) => [
@@ -82,9 +61,8 @@ export async function getDashboardStats(req: Request, res: Response) {
     rateLabel:
       "Current-status proxies; historical transitions before tracking are unknown",
     recent,
-    upcoming,
-    followUps,
-    followUpCount,
+    ...panels,
+    ghostCount,
     weekly: trends.map((t) => ({
       date: t.week.toISOString().slice(0, 10),
       count: Number(t.count),

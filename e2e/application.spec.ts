@@ -19,14 +19,15 @@ test("application journey: create, detail, interview, status, search, export and
   await expect(
     page.getByRole("heading", { name: "Portfolio Labs", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "+ Schedule round" }).click();
+  await page.getByRole("button", { name: "+ Schedule event" }).click();
   const round = page.getByRole("dialog");
-  await round.getByLabel("Round name").fill("Technical conversation");
   await round
-    .getByLabel("Date and time in selected zone")
-    .fill("2026-12-01T10:00");
-  await round.getByLabel("IANA time zone").fill("America/Los_Angeles");
-  await round.getByRole("button", { name: "Schedule interview" }).click();
+    .getByLabel("Title", { exact: true })
+    .fill("Technical conversation");
+  await round.getByLabel("Date", { exact: true }).fill("2026-12-01");
+  await round.getByLabel("Time", { exact: true }).fill("10:00");
+  await round.getByLabel("Time zone").fill("America/Los_Angeles");
+  await round.getByRole("button", { name: "Add event" }).click();
   await expect(round).not.toBeVisible();
   await expect(
     page.getByText("Technical conversation", { exact: true }),
@@ -135,133 +136,221 @@ test("dashboard, theme and mobile navigation remain usable", async ({
     ),
   ).toBe(true);
   await page.screenshot({
-    path: "docs/screenshots/dashboard-mobile.png",
+    path: "test-results/preview/dashboard-mobile.png",
     fullPage: true,
     animations: "disabled",
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.getByRole("button", { name: "Light mode" }).click();
   await page.screenshot({
-    path: "docs/screenshots/dashboard-desktop.png",
+    path: "test-results/preview/dashboard-desktop.png",
     fullPage: true,
     animations: "disabled",
   });
 });
 
-test("dashboard drill-down, follow-up editing, quick status and browser history", async ({
+test("10-row pagination, review page selection and browser history", async ({
   page,
 }) => {
   const headers = { Authorization: "Bearer browser-test-token" };
-  const created = await page.request.post(
-    "http://127.0.0.1:5019/api/applications",
-    {
-      headers,
-      data: {
-        company: "Action Center Labs",
-        role: "UI Engineer",
-        status: "Applied",
-        appliedDate: "2000-01-05",
-        followUpAt: new Date(Date.now() - 86400000).toISOString(),
+  for (let i = 0; i < 21; i++) {
+    const r = await page.request.post(
+      "http://127.0.0.1:5019/api/applications",
+      {
+        headers,
+        data: {
+          company: `Review Fixture ${String(i).padStart(2, "0")}`,
+          role: "Engineer",
+          appliedDate: "2000-01-05",
+          status: "Applied",
+        },
       },
-    },
+    );
+    expect(r.status()).toBe(201);
+  }
+  await page.goto(
+    "/applications?search=Review+Fixture&sort=company&direction=asc",
   );
-  expect(created.status()).toBe(201);
-  const original = await created.json();
-  const id = original.id;
-  await page.goto("/dashboard");
-  await expect(
-    page.getByRole("link", { name: "Manage follow-up for Action Center Labs" }),
-  ).toBeVisible();
-  await page.getByLabel("Date range").selectOption("custom");
-  await page.getByLabel("From", { exact: true }).fill("2000-01-01");
-  await page.getByLabel("To", { exact: true }).fill("2000-01-31");
-  await page.getByRole("link", { name: /^Total applications/ }).click();
-  await expect(page).toHaveURL(/from=2000-01-01&to=2000-01-31/);
-  await expect(
-    page
-      .locator(".application-table")
-      .getByRole("link", { name: "Action Center Labs", exact: true }),
-  ).toBeVisible();
+  const rows = page.locator(".application-table tbody tr");
+  await expect(rows).toHaveCount(10);
+  await expect(page.getByText("21 applications · Page 1 of 3")).toBeVisible();
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText("21 applications · Page 2 of 3")).toBeVisible();
+  await expect(rows).toHaveCount(10);
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(page.getByText("21 applications · Page 3 of 3")).toBeVisible();
+  await expect(rows).toHaveCount(1);
+  await page.goBack();
+  await expect(page.getByText("21 applications · Page 2 of 3")).toBeVisible();
   await page
-    .getByLabel("Status for Action Center Labs")
-    .selectOption("Interview");
-  await expect(page.getByLabel("Status for Action Center Labs")).toBeEnabled();
-  await expect(page.getByLabel("Status for Action Center Labs")).toHaveValue(
-    "Interview",
+    .getByRole("button", { name: "Review applications", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator("tbody tr")).toHaveCount(10);
+  await dialog.getByLabel("Select this page", { exact: true }).check();
+  await expect(dialog.getByText("10 selected", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Next review page" }).click();
+  await expect(dialog.getByText("0 selected", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Previous review page" }).click();
+  await expect(dialog.getByText("0 selected", { exact: true })).toBeVisible();
+  await dialog
+    .getByLabel("Select Review Fixture 00 Engineer", { exact: true })
+    .check();
+  await dialog
+    .getByRole("button", { name: "Mark selected as Ghosted" })
+    .click();
+  await expect(dialog.getByText("0 selected", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByPlaceholder("Company or role…").fill("Review Fixture 00");
+  await expect(page.getByLabel("Status for Review Fixture 00")).toHaveValue(
+    "Ghosted",
   );
-  const search = page.getByPlaceholder("Company or role…");
-  await search.fill("not-a-company");
+  await page.getByPlaceholder("Company or role…").fill("not-a-company");
   await expect(page.getByText(/No applications match/)).toBeVisible();
   await page.getByRole("button", { name: "Remove search filter" }).click();
-  await expect(search).toHaveValue("");
-  await expect(
-    page
-      .locator(".application-table")
-      .getByRole("link", { name: "Action Center Labs", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByPlaceholder("Company or role…")).toHaveValue("");
   await page.goBack();
-  await expect(search).toHaveValue("not-a-company");
-  await expect(page.getByText(/No applications match/)).toBeVisible();
-  await page.goForward();
-  await expect(search).toHaveValue("");
-  await page.getByRole("button", { name: "Reset filters" }).click();
-  await expect(
-    page.getByRole("combobox", { name: "Status", exact: true }),
-  ).toHaveValue("");
-  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await expect(page.getByPlaceholder("Company or role…")).toHaveValue(
+    "not-a-company",
+  );
+});
+
+test("shared event form syncs Calendar, application and Overview on mobile", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/applications?search=Maple+Studio");
   await page
-    .getByRole("link", { name: "Manage follow-up for Action Center Labs" })
+    .getByRole("button", { name: "Schedule event for Maple Studio" })
     .click();
-  const dialog = page.getByRole("dialog", { name: "Edit application" });
-  await expect(dialog).toBeVisible();
+  const form = page.getByRole("dialog");
+  await form.getByLabel("Title", { exact: true }).fill("Shared OA deadline");
+  await form.getByLabel("Category", { exact: true }).selectOption("OA");
+  await form.getByLabel("All-day event").check();
+  const date = await page.evaluate(() =>
+    new Date().toLocaleDateString("en-CA"),
+  );
+  await form.getByLabel("Date", { exact: true }).fill(date);
+  await expect(
+    form.getByLabel("Also update application status to OA"),
+  ).not.toBeChecked();
+  await form.getByLabel("Also update application status to OA").check();
+  await form.getByRole("button", { name: "Add event", exact: true }).click();
+  await expect(form).not.toBeVisible();
+  await expect(page.getByLabel("Status for Maple Studio")).toHaveValue("OA");
+  await page.getByRole("link", { name: "Maple Studio", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Edit event Shared OA deadline" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Calendar", exact: true }).click();
+  await page.getByRole("button", { name: `Show events for ${date}` }).click();
+  const agenda = page.getByRole("region", { name: "Selected day agenda" });
+  await expect(
+    agenda.getByRole("button", { name: "Edit event Shared OA deadline" }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  const attention = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: /Needs attention/ }) });
+  await expect(
+    attention.getByRole("button", { name: "Edit event Shared OA deadline" }),
+  ).toBeVisible();
+  await attention
+    .getByRole("button", { name: "Edit event Shared OA deadline" })
+    .click();
+  await form.getByLabel("Notes", { exact: true }).fill("Bring scratch paper");
+  await form.getByLabel("Date", { exact: true }).fill("2031-02-03");
+  await form.getByRole("button", { name: "Save event" }).click();
+  await expect(form).not.toBeVisible();
+  await page.getByRole("link", { name: "Calendar", exact: true }).click();
+  await page.getByLabel("Month", { exact: true }).fill("2031-02");
+  await page
+    .getByRole("button", { name: "Show events for 2031-02-03" })
+    .click();
+  await agenda
+    .getByLabel("Status for Shared OA deadline")
+    .selectOption("Completed");
+  await expect(agenda.getByLabel("Status for Shared OA deadline")).toHaveValue(
+    "Completed",
+  );
+  await page
+    .getByRole("button", { name: "Add event on 2031-02-04", exact: true })
+    .click();
+  await expect(form.getByLabel("Date", { exact: true })).toHaveValue(
+    "2031-02-04",
+  );
+  await form.getByLabel("Title", { exact: true }).fill("Standalone planning");
+  await form.getByRole("button", { name: "Add event", exact: true }).click();
+  await expect(form).not.toBeVisible();
+  await page
+    .getByRole("button", { name: "Show events for 2031-02-04" })
+    .click();
+  await agenda
+    .getByLabel("Status for Standalone planning")
+    .selectOption("Cancelled");
+  await expect(agenda.getByLabel("Status for Standalone planning")).toHaveValue(
+    "Cancelled",
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/preview/calendar-mobile.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await form.getByLabel("All-day event").uncheck();
+  await form.getByLabel("Date", { exact: true }).fill("2030-03-10");
+  await form.getByLabel("Time", { exact: true }).fill("02:30");
+  await form
+    .getByLabel("Time zone", { exact: true })
+    .fill("America/Los_Angeles");
+  await form.getByLabel("Title", { exact: true }).fill("Invalid DST hour");
+  await form.getByRole("button", { name: "Add event", exact: true }).click();
+  await expect(
+    page.getByText(/This time may be skipped by daylight saving/),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(dialog).not.toBeVisible();
+  await expect(form).not.toBeVisible();
+});
+
+test("editing event notes preserves the original instant including repeated DST hours and seconds", async ({
+  page,
+}) => {
+  const r = await page.request.post("http://127.0.0.1:5019/api/events", {
+    headers: { Authorization: "Bearer browser-test-token" },
+    data: {
+      title: "Repeated hour original",
+      category: "Interview",
+      startsAt: "2030-11-03T09:30:27.123Z",
+      timeZone: "America/Los_Angeles",
+      allDay: false,
+    },
+  });
+  expect(r.status()).toBe(201);
+  const event = await r.json();
+  await page.goto("/calendar");
+  await page.getByLabel("Month", { exact: true }).fill("2030-11");
   await page
-    .getByRole("button", { name: "Edit application", exact: true })
+    .getByRole("button", {
+      name: "Edit event Repeated hour original",
+      exact: true,
+    })
     .click();
-  await expect(dialog).toBeVisible();
-  await dialog
+  const form = page.getByRole("dialog");
+  await form
     .getByLabel("Notes", { exact: true })
-    .fill("Follow-up stays at the original time.");
-  await dialog.getByRole("button", { name: "Save application" }).click();
-  await expect(dialog).not.toBeVisible();
-  const unchanged = await page.request.get(
-    `http://127.0.0.1:5019/api/applications/${id}`,
-    { headers },
+    .fill("Keep the second occurrence and seconds");
+  await form.getByRole("button", { name: "Save event" }).click();
+  await expect(form).not.toBeVisible();
+  const saved = await page.request.get(
+    `http://127.0.0.1:5019/api/events/${event.id}`,
+    { headers: { Authorization: "Bearer browser-test-token" } },
   );
-  expect((await unchanged.json()).followUpAt).toBe(original.followUpAt);
-  await page
-    .getByRole("button", { name: "Edit application", exact: true })
-    .click();
-  await page.getByLabel("Follow-up date (9am local)").fill("2031-02-03");
-  await dialog.getByRole("button", { name: "Save application" }).click();
-  await expect(dialog).not.toBeVisible();
-  const rescheduled = await page.request.get(
-    `http://127.0.0.1:5019/api/applications/${id}`,
-    { headers },
-  );
-  expect((await rescheduled.json()).followUpAt).toBe(
-    await page.evaluate(() => new Date("2031-02-03T09:00:00").toISOString()),
-  );
-  await page
-    .getByRole("button", { name: "Edit application", exact: true })
-    .click();
-  await page.getByLabel("Follow-up date (9am local)").fill("");
-  await dialog.getByRole("button", { name: "Save application" }).click();
-  await expect(dialog).not.toBeVisible();
-  const detail = await page.request.get(
-    `http://127.0.0.1:5019/api/applications/${id}`,
-    { headers },
-  );
-  expect((await detail.json()).followUpAt).toBeNull();
-  await page.getByRole("link", { name: "Overview", exact: true }).click();
-  await expect(
-    page.getByRole("link", { name: "Manage follow-up for Action Center Labs" }),
-  ).toHaveCount(0);
-  await page.getByRole("link", { name: /^Interview: / }).click();
-  await expect(
-    page.getByRole("combobox", { name: "Status", exact: true }),
-  ).toHaveValue("Interview");
+  expect((await saved.json()).startsAt).toBe(event.startsAt);
 });
 
 test("all workspace pages fit mobile, tablet and desktop in both themes", async ({
@@ -307,7 +396,7 @@ test("all workspace pages fit mobile, tablet and desktop in both themes", async 
       }
       for (const [label, path, heading] of [
         ["Applications", "applications", "Applications."],
-        ["Interviews", "calendar", "Interview calendar."],
+        ["Calendar", "calendar", "Calendar."],
         ["Resumes", "resumes", "Resume library."],
         ["Match", "analysis", "Find your fit."],
         ["Overview", "dashboard", "Your job search, at a glance."],
@@ -331,7 +420,7 @@ test("all workspace pages fit mobile, tablet and desktop in both themes", async 
             (width === 1440 && theme === "light"))
         ) {
           await page.screenshot({
-            path: `docs/screenshots/${path}-${width}-${theme}.png`,
+            path: `test-results/preview/${path}-${width}-${theme}.png`,
             fullPage: true,
             animations: "disabled",
           });
@@ -340,7 +429,7 @@ test("all workspace pages fit mobile, tablet and desktop in both themes", async 
     }
   }
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("link", { name: "Interviews", exact: true }).click();
+  await page.getByRole("link", { name: "Calendar", exact: true }).click();
   const rounds = await page.request.get(
     "http://127.0.0.1:5019/api/interviews",
     { headers: { Authorization: "Bearer browser-test-token" } },
@@ -354,14 +443,15 @@ test("all workspace pages fit mobile, tablet and desktop in both themes", async 
   );
   await page.getByLabel("Month", { exact: true }).fill(localDate.slice(0, 7));
   await page
-    .getByRole("button", { name: `Show interviews for ${localDate}` })
+    .getByRole("button", { name: `Show events for ${localDate}` })
     .click();
   await expect(
     page
       .getByRole("region", { name: "Selected day agenda" })
-      .getByRole("link", { name: /Maple Studio/ }),
+      .getByRole("button", { name: /Edit event Technical conversation/ }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Applications", exact: true }).click();
+  await page.getByPlaceholder("Company or role…").fill("Maple Studio");
   const company = page
     .locator(".application-table")
     .getByRole("link", { name: "Maple Studio", exact: true });
@@ -411,7 +501,7 @@ test("all workspace pages fit mobile, tablet and desktop in both themes", async 
         (width === 1440 && theme === "light")
       ) {
         await page.screenshot({
-          path: `docs/screenshots/detail-${width}-${theme}.png`,
+          path: `test-results/preview/detail-${width}-${theme}.png`,
           fullPage: true,
           animations: "disabled",
         });
