@@ -1,5 +1,9 @@
 # Deployment, migration and rollback
 
+## Free resume-review release gate
+
+The free review upgrade is prepared on `Test/free-resume-review`. Follow [its review and migration checklist](RESUME_REVIEW.md) before publishing. No production migration/deployment is authorized by this implementation. Legacy AI settings are ignored; no model provider is used.
+
 ## Calendar release gate
 
 The calendar feature is prepared on `Test/calendar-workflow`. Follow [the calendar preview/migration checklist](CALENDAR.md) before release. Do not push this branch to the connected Vercel repository until preview database isolation is configured: the API build runs migrations, and a Preview environment that shares the production database could migrate production before approval.
@@ -68,7 +72,7 @@ Open localhost:8080 and add that origin to the Clerk development setup. This loc
 - Use HTTPS, set NODE_ENV=production, exact CLIENT_ORIGIN, verified Clerk production keys and managed PostgreSQL TLS. Set DATABASE_URL to a runtime secret. Enable provider backups/PITR.
 - Configure S3 Block Public Access, encryption and a restricted application role. Include existing legacy keys in its object permissions; the new namespace is `resumes/<userId>/<uuid>.pdf`.
 - Use short-lived workload credentials for AWS. SES uses the standard SDK credential chain, not legacy S3 aliases. Verify the SES sender and production sending eligibility separately.
-- Keep AI_MODE=demo and EMAIL_PROVIDER=console until paid-provider approval and staging tests are complete. Set AI_MODEL explicitly to a compatible JSON-mode model before enabling real mode.
+- Free resume reviews require no AI configuration and ignore legacy AI variables. Keep EMAIL_PROVIDER=console; dashboard reminders require no worker.
 - Build backend: `docker build --target backend -t interview-tracker-api:<commit> .`
 - Build frontend: `docker build --target frontend --build-arg VITE_API_URL=https://<api-host>/api --build-arg VITE_CLERK_PUBLISHABLE_KEY=<public-key> -t interview-tracker-web:<commit> .`
 - Run API with `node server/dist/index.js`; run worker with `node server/dist/jobs/worker.js` using the same backend image. Deploy static frontend assets with SPA fallback. Runtime frontend environment changes require rebuilding the bundle.

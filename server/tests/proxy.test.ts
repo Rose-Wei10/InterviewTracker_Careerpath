@@ -19,3 +19,10 @@ it("separates Vercel ingress client addresses while retaining rate limits", asyn
       .status,
   ).toBe(200);
 });
+
+it("rejects test rate-limit overrides outside the test environment", () => {
+  vi.stubEnv("NODE_ENV", "production");
+  expect(() => createApp({ testRateLimit: 1000 })).toThrow(
+    "only allowed in tests",
+  );
+});

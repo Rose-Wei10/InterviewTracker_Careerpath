@@ -11,10 +11,6 @@ const schema = z.object({
   CLERK_SECRET_KEY: z.string().min(1),
   AWS_REGION: z.string().default("us-east-1"),
   AWS_BUCKET_NAME: z.string().optional(),
-  AI_MODE: z.enum(["demo", "openai-compatible"]).default("demo"),
-  AI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
-  AI_API_KEY: z.string().optional(),
-  AI_MODEL: z.string().default("gpt-4.1-mini"),
   EMAIL_PROVIDER: z.enum(["console", "ses"]).default("console"),
   EMAIL_FROM: z.string().email().optional(),
 });
@@ -24,8 +20,6 @@ export function validateEnv(input: NodeJS.ProcessEnv = process.env) {
     throw new Error(
       `Invalid configuration: ${result.error.issues.map((i) => i.path.join(".")).join(", ")}`,
     );
-  if (result.data.AI_MODE !== "demo" && !result.data.AI_API_KEY)
-    throw new Error("AI_API_KEY required");
   if (result.data.EMAIL_PROVIDER === "ses" && !result.data.EMAIL_FROM)
     throw new Error("EMAIL_FROM required");
   if (

@@ -6,7 +6,7 @@ import {
   interviewSchema,
 } from "../src/lib/validation";
 import { validateEnv } from "../src/config/env";
-import { demoAnalysis, validateEvidence } from "../src/services/analysis";
+import { detectRequirements, reviewResume } from "../src/services/resumeReview";
 import { csvCell } from "../src/routes/applicationRoutes";
 import { retryDelay } from "../src/jobs/reminders";
 describe("request boundaries", () => {
@@ -78,36 +78,24 @@ describe("request boundaries", () => {
   });
 });
 describe("resume evidence", () => {
-  it("matches whole keywords without inventing skills", () => {
-    const r = demoAnalysis(
+  it("matches whole keywords without claiming proficiency", () => {
+    const r = reviewResume(
       "Built React interfaces with TypeScript and JavaScript.",
-      "Looking for React, Java and PostgreSQL engineers.",
+      detectRequirements("Looking for React, Java and PostgreSQL engineers."),
     );
-    expect(r.supportedSkills.map((s) => s.skill)).toEqual(["React"]);
-    expect(r.missingSkills).toEqual(["Java", "PostgreSQL"]);
-    expect(r.improvements).toEqual([]);
-    expect(r.heuristicScore).toBe(33);
+    expect(r.checks.filter((v) => v.found).map((v) => v.term)).toEqual([
+      "React",
+    ]);
+    expect(r.foundCount).toBe(1);
+    expect(r.keywordCount).toBe(3);
   });
-  it("rejects fabricated quotations and original bullets", () => {
-    expect(() =>
-      validateEvidence(
-        {
-          supportedSkills: [
-            { skill: "Python", quote: "I built Python services" },
-          ],
-          missingSkills: [],
-          improvements: [],
-          preparationTopics: [],
-        },
-        "Built React apps",
-        "Python",
-      ),
-    ).toThrow();
-  });
-  it("makes no match assessment when there are no recognized keywords", () => {
+  it("has no assessment denominator when no keywords are recognized", () => {
     expect(
-      demoAnalysis("Experienced writer", "We need an editor").assessmentLabel,
-    ).toContain("No recognized");
+      reviewResume(
+        "Experienced writer",
+        detectRequirements("We need an editor"),
+      ).keywordCount,
+    ).toBe(0);
   });
   it("backs off and caps retry delay", () => {
     expect(retryDelay(1)).toBe(60000);

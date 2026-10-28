@@ -277,11 +277,15 @@ describe("real PostgreSQL API behavior", () => {
       consent: false,
     });
     expect(result.status).toBe(201);
-    expect(result.body.mode).toBe("demo");
+    expect(result.body.mode).toBe("rules");
     expect(
-      result.body.result.supportedSkills.map((v: { skill: string }) => v.skill),
+      result.body.result.checks
+        .filter((v: { found: boolean }) => v.found)
+        .map((v: { term: string }) => v.term),
     ).toContain("React");
-    expect(result.body.result.missingSkills).toContain("AWS");
+    expect(result.body.result.checks).toContainEqual(
+      expect.objectContaining({ term: "AWS", found: false }),
+    );
     expect((await as("get", "/api/analyses", "bob")).body).toEqual([]);
     expect(
       (await as("delete", `/api/analyses/${result.body.id}`, "bob")).status,
@@ -304,11 +308,11 @@ describe("real PostgreSQL API behavior", () => {
     });
     const settled = await Promise.allSettled(
       Array.from({ length: 12 }, () =>
-        analyze(
-          "quota-user",
-          "quota-resume",
-          "We need React and TypeScript to build accessible interfaces.",
-        ),
+        analyze("quota-user", {
+          resumeText: "Built React interfaces with TypeScript and PostgreSQL.",
+          jobDescription:
+            "We need React and TypeScript to build accessible interfaces.",
+        }),
       ),
     );
     expect(settled.filter((v) => v.status === "fulfilled")).toHaveLength(10);
@@ -316,81 +320,22 @@ describe("real PostgreSQL API behavior", () => {
       await prisma.analysis.count({ where: { userId: "quota-user" } }),
     ).toBe(10);
   });
-  it("validates real-provider output and requires consent without making paid calls", async () => {
-    await prisma.user.create({ data: { id: "provider-user" } });
-    await prisma.resume.create({
-      data: {
-        id: "provider-resume",
-        userId: "provider-user",
-        name: "Provider fixture",
-        fileKey: "provider.pdf",
-        fileUrl: "",
-      },
-    });
-    process.env.AI_MODE = "openai-compatible";
-    process.env.AI_API_KEY = "test-only-provider-key";
-    const result = {
-      supportedSkills: [
-        {
-          skill: "React",
-          quote: "Built React applications with TypeScript and PostgreSQL.",
-        },
-      ],
-      missingSkills: ["AWS"],
-      improvements: [],
-      preparationTopics: ["Discuss a React project you can substantiate."],
-    };
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [{ message: { content: JSON.stringify(result) } }],
-      }),
-    });
+  it("never calls an AI provider, even when legacy provider settings are enabled", async () => {
+    vi.stubEnv("AI_MODE", "openai-compatible");
+    vi.stubEnv("AI_API_KEY", "test-only");
+    const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     try {
-      const denied = await as("post", "/api/analyses", "provider-user").send({
-        resumeId: "provider-resume",
+      const r = await analyze("alice", {
+        resumeText: "Built React applications with TypeScript and PostgreSQL.",
         jobDescription:
           "We need React and AWS engineers for our full stack product.",
-        consent: false,
       });
-      expect(denied.status).toBe(400);
+      expect(r.mode).toBe("rules");
       expect(fetchMock).not.toHaveBeenCalled();
-      const valid = await analyze(
-        "provider-user",
-        "provider-resume",
-        "We need React and AWS engineers for our full stack product.",
-      );
-      expect(valid.result).toMatchObject({ heuristicScore: 50 });
-      expect(JSON.parse(fetchMock.mock.calls[0][1].body).store).toBe(false);
-      fetchMock.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  ...result,
-                  supportedSkills: [
-                    { skill: "React", quote: "Invented experience" },
-                  ],
-                }),
-              },
-            },
-          ],
-        }),
-      });
-      await expect(
-        analyze(
-          "provider-user",
-          "provider-resume",
-          "We need React and AWS engineers for our full stack product.",
-        ),
-      ).rejects.toThrow("AI output failed evidence validation");
     } finally {
       vi.unstubAllGlobals();
-      process.env.AI_MODE = "demo";
-      delete process.env.AI_API_KEY;
+      vi.unstubAllEnvs();
     }
   });
   it("never creates or delivers follow-up jobs", async () => {

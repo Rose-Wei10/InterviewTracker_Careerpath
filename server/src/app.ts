@@ -15,10 +15,17 @@ import { requireUser } from "./middleware/auth";
 import { errorHandler } from "./lib/errors";
 import prisma from "./config/prisma";
 export function createApp(
-  options: { auth?: RequestHandler; origin?: string } = {},
+  options: {
+    auth?: RequestHandler;
+    origin?: string;
+    testRateLimit?: number;
+  } = {},
 ) {
-  if (options.auth && process.env.NODE_ENV !== "test")
-    throw new Error("Injected auth is only allowed in tests");
+  if (
+    (options.auth || options.testRateLimit !== undefined) &&
+    process.env.NODE_ENV !== "test"
+  )
+    throw new Error("Injected auth or rate limits are only allowed in tests");
   const app = express();
   app.disable("x-powered-by");
   app.use(helmet());
@@ -43,7 +50,7 @@ export function createApp(
           }
         : {}),
       windowMs: 60000,
-      limit: 120,
+      limit: options.testRateLimit ?? 120,
       standardHeaders: "draft-8",
       legacyHeaders: false,
       message: { message: "Too many requests; try again shortly" },

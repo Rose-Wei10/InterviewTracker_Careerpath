@@ -10,8 +10,8 @@ The upgrade preserves the existing application's data model and resume object ke
 - **Dashboard:** date filters, totals for all seven statuses, weekly/monthly trends, current-stage distribution, explicitly labeled status-based response/interview rate proxies, upcoming events, needs-attention reminders, linked recent activity and a manual 30-day Applied review. Totals/offers/stages open filtered applications while preserving the analytics date range. Statistics come from the signed-in user's database records.
 - **Applications:** create, edit, detail and delete; company/role search; location/status/date filters; sorting; 10 rows per page; notes, salary, HTTP(S) job links, resume selection and event scheduling; quick status updates, removable filter chips and reset filters. Search remains synchronized with browser history.
 - **CSV:** transactional imports of up to 500 rows and filtered exports of up to 10,000 rows; invalid batches fail without partial imports; formula-leading export cells are escaped.
-- **Resume library:** named PDF versions, 5 MB limit, PDF signature validation, private S3 objects, one-minute presigned downloads and ownership checks. Legacy object keys/URLs remain in the database; legacy URLs are no longer returned by list endpoints.
-- **Resume match:** select a stored PDF, paste a job description, save and delete analysis history. The default **demo** is a local keyword comparison, clearly labeled as not AI. An optional OpenAI-compatible provider adds evidence-linked coaching. Matching percentages are heuristics, never ATS scores or hiring predictions.
+- **Resume library:** named PDFs, 4 MB upload limit, private S3/Blob storage, one-minute downloads and ownership checks. Each resume opens a job-specific review with an extracted-text preview. Legacy object keys remain unchanged.
+- **Resume match:** free rule-based reviews from an uploaded PDF or pasted text; editable keyword/manual checklists, common aliases, exact evidence excerpts, conditional bullet-editing prompts and printable saved reports. Optionally link to an application and reuse its job description. No AI-provider calls, fabricated achievements, ATS scores or hiring predictions. See [review workflow](docs/RESUME_REVIEW.md).
 - **Calendar:** OA, Interview and Other events, with optional application links; timed events in the viewer's local zone and all-day deadlines that keep their saved date; editing, rescheduling, completion and cancellation through one shared form.
 - **Dashboard reminders:** one day, one hour, 15 minutes or None. Upcoming events cover seven days; Needs attention includes due reminders and overdue unfinished events regardless of analytics dates. No delivery service or worker is needed; open the app to see reminders.
 - **30-day review:** select eligible Applied applications manually, ten per page. The server rechecks ownership, age and current status before marking selected records Ghosted and recording activity.
@@ -35,7 +35,7 @@ flowchart LR
   API -->|Verified identity + owner filters| DB[(PostgreSQL / Prisma)]
   API -->|Private PDF objects| S3[AWS S3]
   API --> Extract[Bounded PDF parsing worker]
-  Extract --> Match[Demo or compatible AI provider]
+  Extract --> Match[Free evidence and bullet checks]
 ```
 
 `client/src/pages` owns page workflows, `components` owns reusable views/forms, `hooks/useApi` retrieves a fresh Clerk token for each request, and TanStack Query caches data under keys containing the user ID. Pages are loaded on demand and chart/auth dependencies are separate production chunks.
@@ -52,7 +52,7 @@ flowchart LR
 | Activity       | Structured kind and JSON transition metadata tied to an application                                                                      |
 | Interview      | Owner-scoped calendar events; optional application, category, all-day flag, UTC instant, IANA zone, notes/status and dashboard lead time |
 | Reminder       | Durable due time, unique dedupe key, attempts, lease, delivery state and receipt                                                         |
-| Analysis       | Owner/resume, job description, mode, result and creation date; incomplete attempts count toward quota                                    |
+| Analysis       | Owner, optional resume/application, job snapshot, status/failure reason, versioned result and creation date                              |
 
 Owner/date and owner/status indexes support scoped lists. Application deletion cascades dependent timeline/rounds/reminders. Resume deletion clears application selection and deletes associated analyses. The migration adds tables/nullable columns/defaults without deleting existing records or object keys.
 
@@ -60,7 +60,7 @@ The dashboard returns `upcoming`, `upcomingCount`, `attention`, `attentionCount`
 
 ## Local setup
 
-Use Node.js **22.13+** (Node 22 LTS recommended), npm and PostgreSQL 16+. A Clerk development application is required for interactive sign-in. AWS is needed only for resume storage; AI and email default to demo/console.
+Use Node.js **22.13+** (Node 22 LTS recommended), npm and PostgreSQL 16+. A Clerk development application is required for interactive sign-in. Private storage is needed only for PDF workflows; pasted-text reviews require no storage or AI provider. Legacy email remains disabled by default.
 
 ```sh
 npm ci
@@ -71,21 +71,19 @@ npm run db:generate
 
 Populate the files locally. Never paste secret keys in chat or commit them. The old tracked frontend `.env` is removed from version control by this upgrade; use the example file. Rotate any previously exposed AWS/Clerk credentials through their dashboards.
 
-| Variable                                  | Purpose                                                                                   |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------- |
-| DATABASE_URL                              | PostgreSQL connection URL; use TLS for a managed database                                 |
-| PORT                                      | API port, default 5001                                                                    |
-| CLIENT_ORIGIN                             | Exact frontend origin; HTTPS required in production                                       |
-| CLERK_PUBLISHABLE_KEY / CLERK_SECRET_KEY  | Backend Clerk configuration                                                               |
-| VITE_CLERK_PUBLISHABLE_KEY                | Public frontend Clerk key for the same instance                                           |
-| VITE_API_URL                              | API base URL including `/api`; compiled into the frontend build                           |
-| AWS_REGION / AWS_BUCKET_NAME              | Private resume bucket configuration                                                       |
-| AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY | Optional local standard SDK credentials; prefer a workload IAM role in production         |
-| AWS_ACCESS_KEY / AWS_SECRET_KEY           | Legacy S3-only aliases retained for compatibility                                         |
-| AI_MODE                                   | `demo` (default) or `openai-compatible`                                                   |
-| AI_BASE_URL / AI_MODEL / AI_API_KEY       | Optional backend provider endpoint, model and secret; choose a model supporting JSON mode |
-| EMAIL_PROVIDER                            | `console` (default) or `ses`                                                              |
-| EMAIL_FROM                                | Required verified sender for SES                                                          |
+| Variable                                  | Purpose                                                                           |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| DATABASE_URL                              | PostgreSQL connection URL; use TLS for a managed database                         |
+| PORT                                      | API port, default 5001                                                            |
+| CLIENT_ORIGIN                             | Exact frontend origin; HTTPS required in production                               |
+| CLERK_PUBLISHABLE_KEY / CLERK_SECRET_KEY  | Backend Clerk configuration                                                       |
+| VITE_CLERK_PUBLISHABLE_KEY                | Public frontend Clerk key for the same instance                                   |
+| VITE_API_URL                              | API base URL including `/api`; compiled into the frontend build                   |
+| AWS_REGION / AWS_BUCKET_NAME              | Private resume bucket configuration                                               |
+| AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY | Optional local standard SDK credentials; prefer a workload IAM role in production |
+| AWS_ACCESS_KEY / AWS_SECRET_KEY           | Legacy S3-only aliases retained for compatibility                                 |
+| EMAIL_PROVIDER                            | `console` (default) or `ses`                                                      |
+| EMAIL_FROM                                | Required verified sender for SES                                                  |
 
 For a **new, empty database only**, apply the migration chain:
 
@@ -109,7 +107,7 @@ Open `http://localhost:5173`. API liveness is `http://localhost:5001/health`; `/
 
 **S3:** enable Block Public Access and default encryption. Give the API role only `s3:PutObject`, `s3:GetObject`, and `s3:DeleteObject` for the configured bucket's resume objects, including legacy keys. Do not rename legacy objects. Bucket permissions are an external setup step; deploying code alone does not make old public objects private. Existing objects must be audited before enabling a production demo. See [privacy and storage operations](docs/SECURITY.md).
 
-**AI:** demo requires no API key and does not contact a model provider. Real mode sends extracted resume text (up to 20 PDF pages / 40,000 characters) and the job description to the configured endpoint after user consent. Requests have a timeout, a per-user rate limit and a database-serialized quota of 10 attempts per rolling day. Outputs pass Zod and exact evidence checks; unverified factual claims are not accepted as verified experience. Coaching still needs human review. JSON mode is used for cross-provider compatibility, then validated server-side; see [official JSON-mode guidance](https://developers.openai.com/api/docs/guides/structured-outputs). Requests set `store:false`; separately review the provider's retention policy.
+**Resume reviews:** free checks run in the backend. Legacy AI configuration is ignored; no provider key or consent checkbox is required. PDF extraction is bounded to 20 pages / 40,000 characters with an explicit limit warning. Pasted text is not stored in full; job descriptions, report excerpts and guidance remain in private history. Completed/processing reviews count toward the rolling daily allowance; failed attempts do not. This is evidence matching and editing guidance, not semantic AI analysis.
 
 **SES:** verify a sender/domain, configure the worker's IAM role with `ses:SendEmail`, and verify recipients while SES is in sandbox. Console mode stays functional without SES. No live email or paid model requests are part of the automated tests.
 
@@ -133,11 +131,13 @@ Bearer authentication is required for `/api/*`. Errors use `{message, errors?: [
 | `/api/applications/ghost-review`                | GET candidates, ten per page; POST `{ids}` (1-10), returns updatedIds/skippedIds                           |
 | `/api/reminders`                                | GET owned delivery statuses                                                                                |
 | `/api/resumes`                                  | GET metadata; POST multipart `resume`, `name`, `description`, `version`                                    |
+| `/api/resumes/:id/text`                         | GET owned extracted text, page count and truncation flag; uncached                                         |
+| `/api/analyses/requirements`                    | POST `{jobDescription}`; editable keyword/manual suggestions                                               |
 | `/api/resumes/:id/download`                     | GET one-minute presigned private URL                                                                       |
 | `/api/resumes/:id`                              | DELETE object and record                                                                                   |
-| `/api/analyses/config`                          | GET mode, provider origin/model and daily quota                                                            |
-| `/api/analyses`                                 | GET history; POST `{resumeId,jobDescription,consent}`                                                      |
-| `/api/analyses/:id`                             | DELETE history                                                                                             |
+| `/api/analyses/config`                          | GET free mode (`rules`) and daily allowance                                                                |
+| `/api/analyses`                                 | GET owned history (optional applicationId); POST PDF or pasted text review                                 |
+| `/api/analyses/:id`                             | GET owned report; DELETE history                                                                           |
 
 Application list/export filters: `search`, `status`, `location`, `from`, `to`, `sort`, `direction`, `page`, `pageSize`. Sort fields are allowlisted. Status strings remain compatible with existing data: Applied, OA, Interview, Final Round, Offer, Reject, Ghosted.
 
@@ -155,7 +155,7 @@ npm audit
 
 The test runner ignores your DATABASE_URL, starts PostgreSQL on an unused local port in a temporary directory, and creates separate test databases. It checks the entire fresh migration chain and seeds a legacy resume before applying the additive migration to assert preservation. PostgreSQL binaries are a development-only dependency. In constrained environments, allow local child processes and loopback ports; no Docker daemon is required.
 
-API tests use real PostgreSQL and inject a test identity; S3/Clerk delivery lookups are mocked. Browser tests run the real API, database and UI with a test-only Clerk adapter selected exclusively by Vite's `e2e` mode. They exercise application create/detail/status/delete, interview creation, search, CSV export, responsive navigation and theme. They do **not** verify Clerk's hosted login, real bucket policies, SES delivery or paid AI outputs. Never deploy an `e2e` frontend build or the test server.
+API tests use real PostgreSQL and inject a test identity; S3/Clerk delivery lookups are mocked. Browser tests run the real API, database and UI with a test-only Clerk adapter selected exclusively by Vite's `e2e` mode. They exercise application create/detail/status/delete, interview creation, search, CSV export, responsive navigation and theme. They do **not** verify Clerk's hosted login, real bucket policies, SES delivery or hosted storage credentials. Never deploy an `e2e` frontend build or the test server.
 
 ## Deployment and operations
 

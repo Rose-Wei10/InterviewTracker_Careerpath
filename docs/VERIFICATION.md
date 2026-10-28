@@ -1,5 +1,15 @@
 # Verification record
 
+## Free resume review — 2026-10-28
+
+- `npm run check`: lint, strict client/server types, 31 unit/component/PDF tests and both production builds pass. Tests include aliases/punctuation and duplicate alias handling, exact excerpts, manual requirements, truthful guidance, legacy report rendering, failed/processing states and production rejection of test-only limit overrides.
+- `npm run preview:review`: 25 PostgreSQL integration tests and nine Chromium journeys pass. Migration fixtures retain original report JSON, resume relationships, job snapshots and dates, backfill states and safely repeat both new migrations. Prisma detects no schema difference after the preservation rehearsal.
+- API tests cover PDF and pasted sources, ownership, private uncached extraction, storage/scanned-PDF failures, snapshots surviving job edits/deletion, mixed-input rejection, concurrent quota reservations, failed-attempt exclusion, interrupted-attempt recovery and proof that legacy AI settings never trigger an AI request.
+- Browser flows cover job-prefilled review, custom/manual requirements, evidence and bullet prompts, saved report links, earlier-input warnings, actual PDF upload/extraction using temporary sandbox storage, failure-to-paste fallback, preserved inputs after errors, empty findings and mobile layout. Existing application/calendar/theme/history journeys remain passing.
+- Local development database was backed up to ignored private `.local-backups`, restored into disposable PostgreSQL and rehearsed before applying the migration to localhost. Original user/application/resume/report/activity/event/reminder fields were compared unchanged. Local frontend/API were restarted; API health/readiness returned 200. Chrome with the existing real Clerk session loaded Resume library, listed the historical report, and extracted the existing private PDF successfully without showing its contents in chat. No production database or PDF object was modified.
+
+Release acceptance still required: hosted login/storage, production-copy migration rehearsal and restore, real devices/Safari/Firefox and production load. Synthetic PDF tests do not certify real cloud storage. Existing dependency advisories remain separate. [Review and release gate](RESUME_REVIEW.md).
+
 ## Shared calendar and review — 2026-10-27
 
 - `npm run check`: lint, strict client/server types, 23 unit/component/PDF tests and both production builds pass locally on macOS arm64 / Node 26.12.1.

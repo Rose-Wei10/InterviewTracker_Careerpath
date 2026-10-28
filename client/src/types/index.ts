@@ -19,6 +19,7 @@ export interface Application {
   jobLink?: string | null;
   notes?: string | null;
   resumeId?: string | null;
+  jobDescription?: string | null;
   createdAt: string;
   updatedAt: string;
   activities?: Activity[];
@@ -88,8 +89,14 @@ export interface Analysis {
   id: string;
   mode: string;
   createdAt: string;
-  result: AnalysisResult | null;
-  resume: { name: string };
+  result: AnalysisResult | FreeReviewResult | null;
+  status: "pending" | "completed" | "failed";
+  failureReason?: string | null;
+  resumeId?: string | null;
+  applicationId?: string | null;
+  jobDescription: string;
+  resume: { name: string } | null;
+  application?: { id: string; company: string; role: string } | null;
 }
 
 export type EventCategory = "OA" | "Interview" | "Other";
@@ -109,4 +116,18 @@ export interface CalendarEvent {
   needsAttention?: boolean;
   overdue?: boolean;
   reminderAt?: string | null;
+}
+
+export interface Requirement {
+  term: string;
+  kind: "keyword" | "manual";
+}
+export interface FreeReviewResult {
+  schemaVersion: 2;
+  checks: (Requirement & { found: boolean; quote: string | null })[];
+  foundCount: number;
+  keywordCount: number;
+  improvements: { original: string; suggestions: string[] }[];
+  preparationTopics: string[];
+  warnings: string[];
 }

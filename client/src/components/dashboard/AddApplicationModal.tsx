@@ -27,6 +27,7 @@ export default function AddApplicationModal({
     salary: application?.salary ?? "",
     jobLink: application?.jobLink ?? "",
     notes: application?.notes ?? "",
+    jobDescription: application?.jobDescription ?? "",
     resumeId: application?.resumeId ?? "",
   });
   const resumes = useQuery({
@@ -127,6 +128,16 @@ export default function AddApplicationModal({
                 </option>
               ))}
             </select>
+          </label>
+          <label className="full-width">
+            Job description (optional)
+            <textarea
+              name="jobDescription"
+              value={form.jobDescription}
+              onChange={change}
+              rows={5}
+              maxLength={20000}
+            />
           </label>
           <label className="full-width">
             Notes

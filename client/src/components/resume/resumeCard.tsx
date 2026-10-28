@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { FileText, Download, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useApi } from "../../hooks/useApi";
@@ -36,6 +37,12 @@ export default function ResumeCard({
         {resume.size ? ` · ${Math.round(resume.size / 1024)} KB` : ""}
       </p>
       <div className="actions">
+        <Link
+          className="button primary"
+          to={`/analysis?resumeId=${encodeURIComponent(resume.id)}`}
+        >
+          Review for a job
+        </Link>
         <button onClick={download}>
           <Download size={15} /> Download
         </button>

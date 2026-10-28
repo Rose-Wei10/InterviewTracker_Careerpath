@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { useApi } from "../../hooks/useApi";
 import { errorMessage } from "../../services/api";
 import { invalidateUserQueries } from "../../services/queryCache";
-import { Modal } from "../ui";
+import { Modal, ErrorState } from "../ui";
 export default function UploadResumeModal({
   onClose,
 }: {
@@ -85,6 +85,7 @@ export default function UploadResumeModal({
           Upload only documents you’re comfortable storing in your private
           library.
         </p>
+        {upload.isError && <ErrorState error={upload.error} />}
         <div className="actions modal-actions">
           <button type="button" onClick={onClose}>
             Cancel

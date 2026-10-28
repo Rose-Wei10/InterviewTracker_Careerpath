@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
@@ -70,7 +71,11 @@ export default function ResumeLibrary() {
       ) : (
         <Empty>
           <h2>Your experience deserves a home.</h2>
-          <p>Upload your first PDF to start your library.</p>
+          <p>
+            Upload your first PDF to start your library, or{" "}
+            <Link to="/analysis">review pasted resume text</Link> without an
+            upload.
+          </p>
           <button onClick={() => setUploading(true)}>Upload a resume</button>
         </Empty>
       )}

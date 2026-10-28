@@ -1,5 +1,19 @@
 # Upgrade progress
 
+## Free resume review — 2026-10-28
+
+Branch: `Test/free-resume-review`. [Review workflow and release gate](RESUME_REVIEW.md).
+
+- [x] Free PDF/pasted-text reviews, private extracted-text preview and actionable storage/parsing failures
+- [x] Editable detected/custom/manual requirement checklist, common aliases and exact evidence excerpts
+- [x] Conditional prompts for existing bullets, truthful preparation prompts, printable report and prior-input warning
+- [x] Optional application links, saved job descriptions, report snapshots and linked report history
+- [x] Versioned results, legacy report rendering, explicit processing/completed/failed states and failed-attempt quota exclusion
+- [x] Additive migration preservation/retry/schema consistency; backed-up and rehearsed localhost upgrade
+- [x] Local lint/types/builds, 31 unit/component/PDF tests, 25 database tests and nine Chromium desktop/mobile journeys
+- [x] Synthetic review preview with private temporary PDF storage, no AI or cloud-storage calls
+- [ ] Owner preview review, hosted storage/authentication acceptance and production-copy rehearsal before release
+
 ## Shared calendar and 30-day review — 2026-10-27
 
 Branch: `Test/calendar-workflow`. [Review and rollout](CALENDAR.md).

@@ -24,7 +24,12 @@ export async function createResume(req: Request, res: Response) {
     key = await storeResume(
       `resumes/${userId}/${randomUUID()}.pdf`,
       file.buffer,
-    );
+    ).catch(() => {
+      throw new HttpError(
+        503,
+        "Resume upload is unavailable. Your form is unchanged; try again or use pasted text in Match.",
+      );
+    });
   try {
     const resume = await prisma.$transaction(async (tx) => {
       await tx.user.upsert({
@@ -78,7 +83,12 @@ export async function downloadResume(req: Request, res: Response) {
   });
   if (!record) throw new HttpError(404, "Resume not found");
   res.set("Cache-Control", "no-store").json({
-    url: await resumeDownloadUrl(record.fileKey),
+    url: await resumeDownloadUrl(record.fileKey).catch(() => {
+      throw new HttpError(
+        503,
+        "Resume download is unavailable. Please try again shortly.",
+      );
+    }),
   });
 }
 export async function deleteResume(req: Request, res: Response) {

@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { useApi } from "../hooks/useApi";
 import { errorMessage } from "../services/api";
 import { invalidateUserQueries } from "../services/queryCache";
-import type { Application, CalendarEvent } from "../types";
+import type { Analysis, Application, CalendarEvent } from "../types";
 import { statuses } from "../types";
 import { Loading, ErrorState } from "../components/ui";
 import AddApplicationModal from "../components/dashboard/AddApplicationModal";
@@ -22,6 +22,10 @@ export default function ApplicationDetail() {
   const query = useQuery({
     queryKey: ["application", api.userId, id],
     queryFn: () => api.get<Application>(`/applications/${id}`),
+  });
+  const reviews = useQuery({
+    queryKey: ["application-analyses", api.userId, id],
+    queryFn: () => api.get<Analysis[]>("/analyses", { applicationId: id }),
   });
   const update = useMutation({
     mutationFn: (status: string) =>
@@ -106,6 +110,22 @@ export default function ApplicationDetail() {
             </p>
           </section>
           <section className="detail-section">
+            <h2>Job-specific resume review</h2>
+            <Link
+              className="button primary"
+              to={`/analysis?applicationId=${encodeURIComponent(a.id)}${a.resumeId ? `&resumeId=${encodeURIComponent(a.resumeId)}` : ""}`}
+            >
+              Review for a job
+            </Link>
+            <details>
+              <summary>Saved job description</summary>
+              <p className="notes">
+                {a.jobDescription ||
+                  "No job description saved. Add one when editing or in Match."}
+              </p>
+            </details>
+          </section>
+          <section className="detail-section">
             <h2>Notes</h2>
             <p className="notes">
               {a.notes || "Add notes to keep the important details close."}
@@ -114,6 +134,28 @@ export default function ApplicationDetail() {
         </section>
         <ActivityFeed data={a.activities ?? []} />
       </div>
+      <section className="card">
+        <h2>Saved resume reviews</h2>
+        {reviews.isPending ? (
+          <Loading />
+        ) : reviews.isError ? (
+          <ErrorState error={reviews.error} retry={() => reviews.refetch()} />
+        ) : reviews.data.length ? (
+          reviews.data.map((r) => (
+            <p key={r.id}>
+              <Link to={`/analysis?reportId=${encodeURIComponent(r.id)}`}>
+                {r.resume?.name ?? "Pasted resume"} ·{" "}
+                {new Date(r.createdAt).toLocaleString()} · {r.status}
+              </Link>
+            </p>
+          ))
+        ) : (
+          <p className="empty">
+            No linked reviews yet. Review your resume against this job to save
+            one here.
+          </p>
+        )}
+      </section>
       <section className="card">
         <div className="section-heading">
           <h2>Calendar events</h2>

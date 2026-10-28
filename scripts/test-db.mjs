@@ -20,7 +20,12 @@ const pg = new EmbeddedPostgres({
   onError: () => {},
 });
 const url = `postgresql://postgres:test-only@127.0.0.1:${port}/interview_tracker_test`;
-const env = { ...process.env, DATABASE_URL: url, NODE_ENV: "test" };
+const env = {
+  ...process.env,
+  DATABASE_URL: url,
+  NODE_ENV: "test",
+  REVIEW_STORAGE_DIR: join(dir, "browser-resumes"),
+};
 function run(cmd, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { env, stdio: "inherit" });
@@ -123,6 +128,38 @@ try {
     throw new Error("Legacy delivery preservation failed");
   console.log(
     "Calendar migration preserves IDs, notes, relationships and times; retries create no duplicates and retain delivery history.",
+  );
+  await preserve.query(
+    `INSERT INTO "Analysis" (id,"userId","resumeId","jobDescription",mode,result) VALUES ('old-report','legacy','resume','Original job snapshot','demo','{"supportedSkills":[],"missingSkills":[],"improvements":[],"preparationTopics":[],"heuristicScore":0,"assessmentLabel":"Legacy"}'),('old-failed','legacy','resume','Failed job snapshot','demo',NULL);`,
+  );
+  const beforeReview = (
+    await preserve.query(
+      'SELECT id,"resumeId","jobDescription",mode,result,"createdAt" FROM "Analysis" ORDER BY id',
+    )
+  ).rows;
+  const reviewMigration = await readFile(
+    "server/prisma/migrations/20261028000000_free_resume_review/migration.sql",
+    "utf8",
+  );
+  await preserve.query(reviewMigration);
+  await preserve.query(reviewMigration);
+  const afterReview = (
+    await preserve.query(
+      'SELECT id,"resumeId","jobDescription",mode,result,"createdAt" FROM "Analysis" ORDER BY id',
+    )
+  ).rows;
+  if (JSON.stringify(beforeReview) !== JSON.stringify(afterReview))
+    throw Error("Legacy report data changed");
+  const reportStates = (
+    await preserve.query('SELECT id,status FROM "Analysis" ORDER BY id')
+  ).rows;
+  if (
+    reportStates[0].status !== "failed" ||
+    reportStates[1].status !== "completed"
+  )
+    throw Error("Legacy report state backfill failed");
+  console.log(
+    "Free review migration preserves legacy reports and backfills completed/failed states; retries are safe.",
   );
   await run("./node_modules/.bin/prisma", [
     "migrate",

@@ -22,6 +22,7 @@ export const applicationSchema = z
     location: optionalText(200),
     salary: optionalText(100),
     notes: optionalText(20000),
+    jobDescription: optionalText(20000),
     jobLink: z
       .union([
         z

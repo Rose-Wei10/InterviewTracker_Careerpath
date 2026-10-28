@@ -26,12 +26,14 @@ model JobApplication {
   location String?
   salary String?
   updatedAt DateTime @updatedAt
+  jobDescription String?
   followUpAt DateTime?
   resumeId String?
   user User @relation(fields: [userId], references: [id])
   resume Resume? @relation(fields: [resumeId], references: [id], onDelete: SetNull)
   activities Activity[]
   interviews Interview[]
+  analyses Analysis[]
   reminders Reminder[]
   @@index([userId, appliedDate])
   @@index([userId, status])
@@ -100,12 +102,17 @@ model Reminder {
 model Analysis {
   id String @id @default(cuid())
   userId String
-  resumeId String
+  resumeId String?
+  applicationId String?
+  status String @default("pending")
+  failureReason String?
   jobDescription String
   mode String
   result Json?
   createdAt DateTime @default(now())
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resume Resume? @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  application JobApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  @@index([applicationId])
   @@index([userId, createdAt])
 }
