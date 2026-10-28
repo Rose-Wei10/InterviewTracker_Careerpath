@@ -4,6 +4,8 @@ This change is prepared on `Test/calendar-workflow`. Production migration and de
 
 ## Review locally
 
+An existing local development database also needs the calendar migration before `npm run dev` can serve the new pages. First back up that local database and verify its migration history, then run `npm run db:migrate` and `npm run db:generate`. Restart development afterward. These commands use `server/.env`; confirm it points to your local database, never the hosted production database. Starting the development server does not apply migrations automatically.
+
 Run `npm run preview:review`. This creates a disposable PostgreSQL database, verifies preservation and APIs, runs browser journeys, then keeps the synthetic workspace open at http://127.0.0.1:5179. It never reads the local DATABASE_URL. It uses a fixed browser-test identity on loopback only, not real Clerk login, private storage or paid AI. Stop with Ctrl+C to stop both servers and the temporary database. Do not expose these test servers to a public network.
 
 Review these workflows in light/dark mode on desktop and mobile:
