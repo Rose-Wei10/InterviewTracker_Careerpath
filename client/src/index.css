@@ -1070,7 +1070,7 @@ footer {
   }
 }
 
-/* Glass stays on navigation; content surfaces remain opaque. */
+/* Keep text surfaces readable while the surrounding workspace catches light. */
 @supports (backdrop-filter: blur(16px)) {
   .sidebar,
   .topbar {
@@ -1670,5 +1670,290 @@ button.calendar-event span {
   }
   @page {
     margin: 14mm;
+  }
+}
+
+/* Shared glass surfaces and compact workspace controls. */
+.app {
+  --glass-card: #ffffffd9;
+  --glass-line: #ffffffb3;
+  --panel-shadow: 0 8px 28px #4037810c, inset 0 1px 0 var(--glass-line);
+}
+.app[data-theme="dark"] {
+  --glass-card: #192137e6;
+  --glass-line: #ffffff14;
+  --panel-shadow: 0 8px 28px #00000026, inset 0 1px 0 var(--glass-line);
+}
+.card,
+.stat-card,
+.detail-heading,
+.ghost-banner {
+  box-shadow: var(--panel-shadow);
+}
+@supports (backdrop-filter: blur(12px)) {
+  .card,
+  .stat-card,
+  .detail-heading,
+  .ghost-banner,
+  dialog {
+    background: var(--glass-card);
+    backdrop-filter: blur(12px);
+  }
+}
+button,
+.button,
+.resume-card,
+.history-select {
+  transition:
+    border-color 180ms,
+    box-shadow 180ms,
+    background-color 180ms,
+    transform 180ms;
+}
+button:not(:disabled):hover,
+.button:hover {
+  box-shadow: 0 3px 12px #5148bb12;
+}
+button:not(:disabled):active,
+.button:active {
+  transform: translateY(1px);
+}
+.resume-card:hover {
+  border-color: var(--accent);
+}
+.history-select:hover {
+  background: var(--soft);
+}
+.navigation-toggle {
+  margin: -30px 0 24px;
+  font-size: 11px;
+  justify-content: flex-start;
+}
+.sidebar,
+.workspace {
+  transition:
+    width 200ms ease,
+    margin-left 200ms ease;
+}
+.icon-tip {
+  position: relative;
+}
+.icon-tip::after {
+  display: none;
+  position: absolute;
+  z-index: 5;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  content: attr(data-tooltip);
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+}
+.review-workspace {
+  grid-template-columns: minmax(0, 1fr) clamp(260px, 36%, 440px);
+  transition: grid-template-columns 200ms ease;
+}
+.review-workspace.history-collapsed {
+  grid-template-columns: minmax(0, 1fr) 56px;
+}
+.review-workspace > section {
+  min-width: 0;
+}
+.history-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.history-toggle {
+  padding: 8px;
+}
+.history-toggle .count {
+  margin: 0;
+}
+.history-mobile-label,
+.history-expand-icon {
+  display: none;
+}
+.history-collapsed .review-history {
+  padding: 10px 4px;
+}
+.history-collapsed .history-heading {
+  justify-content: center;
+}
+.history-collapsed .history-title {
+  display: none;
+}
+.history-collapsed .history-toggle {
+  flex-direction: column;
+  border: 0;
+  background: transparent;
+}
+.history-collapsed .history-expand-icon {
+  display: block;
+}
+.history-toggle::after {
+  right: 0;
+  top: calc(100% + 8px);
+}
+.history-toggle:hover::after,
+.history-toggle:focus::after {
+  display: block;
+}
+.review-submit {
+  display: grid;
+  gap: 12px;
+}
+.review-submit ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.review-result-anchor {
+  scroll-margin-top: 95px;
+}
+dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(820px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 40px);
+  overscroll-behavior: contain;
+  box-shadow:
+    0 24px 90px #10152640,
+    inset 0 1px 0 var(--glass-line);
+}
+dialog.dialog-compact {
+  width: min(440px, calc(100vw - 32px));
+}
+dialog[open] {
+  animation: dialog-enter 200ms ease-out;
+}
+dialog[open]::backdrop {
+  animation: backdrop-enter 180ms ease-out;
+}
+dialog .modal-head {
+  position: sticky;
+  top: -28px;
+  z-index: 1;
+  background: var(--surface);
+  padding: 14px 0;
+}
+dialog .modal-actions {
+  position: sticky;
+  bottom: -28px;
+  background: var(--surface);
+  padding: 14px 0;
+}
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (min-width: 761px) {
+  .navigation-collapsed .sidebar {
+    width: 72px;
+    padding: 35px 10px;
+  }
+  .navigation-collapsed .workspace {
+    margin-left: 72px;
+    width: calc(100% - 72px);
+  }
+  .navigation-collapsed .navigation-label,
+  .navigation-collapsed .sidebar > .eyebrow,
+  .navigation-collapsed .workspace-note {
+    display: none;
+  }
+  .navigation-collapsed .brand {
+    justify-content: center;
+  }
+  .navigation-collapsed .navigation-toggle {
+    margin-top: -30px;
+    justify-content: center;
+  }
+  .navigation-collapsed nav a,
+  .navigation-collapsed .theme-toggle {
+    justify-content: center;
+    padding: 12px;
+  }
+  .navigation-collapsed .icon-tip::after {
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .navigation-collapsed .icon-tip:hover::after,
+  .navigation-collapsed .icon-tip:focus::after {
+    display: block;
+  }
+}
+@media (min-width: 761px) and (max-width: 1100px) {
+  .review-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+@media (max-width: 760px) {
+  .navigation-toggle {
+    display: none;
+  }
+  .review-workspace,
+  .review-workspace.history-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .history-collapsed .review-history {
+    padding: 20px;
+  }
+  .history-collapsed .history-heading {
+    justify-content: space-between;
+  }
+  .history-collapsed .history-title,
+  .history-mobile-label {
+    display: inline;
+  }
+  .history-collapsed .history-toggle {
+    flex-direction: row;
+  }
+  .history-collapsed .history-expand-icon {
+    display: none;
+  }
+  .history-toggle::after {
+    content: none;
+  }
+  dialog {
+    padding: 20px;
+    max-height: calc(100dvh - 24px);
+  }
+  dialog .modal-head {
+    top: -20px;
+  }
+  dialog .modal-actions {
+    bottom: -20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
   }
 }

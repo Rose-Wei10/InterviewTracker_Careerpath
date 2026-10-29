@@ -11,7 +11,9 @@ export function errorMessage(error: unknown) {
     return (
       data?.errors?.map((e) => `${e.field}: ${e.message}`).join("; ") ||
       data?.message ||
-      "Unable to connect. Please try again."
+      (error.response?.status === 429
+        ? "Too many requests. Please wait a minute and try again."
+        : "Unable to connect. Please try again.")
     );
   }
   return error instanceof Error ? error.message : "Something went wrong";

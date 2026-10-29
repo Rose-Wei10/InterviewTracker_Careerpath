@@ -31,10 +31,12 @@ export function Modal({
   title,
   children,
   onClose,
+  compact = false,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  compact?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -47,7 +49,12 @@ export function Modal({
     };
   }, []);
   return (
-    <dialog ref={ref} onCancel={onClose} aria-label={title}>
+    <dialog
+      ref={ref}
+      className={compact ? "dialog-compact" : undefined}
+      onCancel={onClose}
+      aria-label={title}
+    >
       <div className="modal-head">
         <h2>{title}</h2>
         <button aria-label="Close dialog" onClick={onClose}>
@@ -70,7 +77,7 @@ export function Confirm({
   busy?: boolean;
 }) {
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal title={title} onClose={onClose} compact>
       <p>This cannot be undone.</p>
       <div className="actions">
         <button onClick={onClose}>Cancel</button>

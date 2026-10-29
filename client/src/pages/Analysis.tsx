@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-import { FileCheck2 } from "lucide-react";
+import {
+  FileCheck2,
+  History,
+  PanelRightClose,
+  PanelRightOpen,
+} from "lucide-react";
 import { useApi } from "../hooks/useApi";
 import { invalidateUserQueries } from "../services/queryCache";
 import type {
@@ -15,6 +20,14 @@ import type {
 import { Loading, ErrorState, Confirm } from "../components/ui";
 import ReviewReport from "../components/match/ReviewReport";
 export default function Analysis() {
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [historyCollapsed, setHistoryCollapsed] = useState(
+    () => localStorage.getItem("review-history-collapsed") === "true",
+  );
+  function toggleHistory() {
+    localStorage.setItem("review-history-collapsed", String(!historyCollapsed));
+    setHistoryCollapsed(!historyCollapsed);
+  }
   const api = useApi(),
     qc = useQueryClient(),
     [params, setParams] = useSearchParams();
@@ -75,6 +88,15 @@ export default function Analysis() {
     enabled: !!params.get("reportId"),
   });
   const displayed = selected ?? reportQuery.data;
+  useEffect(() => {
+    if (selected)
+      reportRef.current?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      });
+  }, [selected]);
   const preview = useMutation({
     mutationFn: (id: string) =>
       api.get<{ text: string; pages: number; truncated: boolean }>(
@@ -168,6 +190,28 @@ export default function Analysis() {
     ...(applications.data?.items ?? []),
   ].filter((a, i, all) => all.findIndex((v) => v.id === a.id) === i);
   const busy = review.isPending || preview.isPending || detect.isPending;
+  const reviewIssues = [
+    source === "pdf"
+      ? !resumeId
+        ? "Select an uploaded PDF or switch to pasted text."
+        : null
+      : text.trim().length < 20 || text.trim().length > 40000
+        ? "Paste 20–40,000 characters of resume text."
+        : null,
+    description.trim().length < 50 || description.trim().length > 20000
+      ? "Use 50–20,000 characters for the job description."
+      : null,
+    !requirementsReady ? "Find requirements, then review the checklist." : null,
+    requirements.some((r) => !r.term.trim() || r.term.trim().length > 200)
+      ? "Each requirement needs 1–200 characters; edit or remove empty rows."
+      : null,
+    applicationId && application.isPending
+      ? "Loading the linked application…"
+      : null,
+    applicationId && application.isError
+      ? "The linked application could not be loaded. Retry or choose no application."
+      : null,
+  ].filter((issue): issue is string => !!issue);
   return (
     <>
       <div className="page-heading">
@@ -186,14 +230,16 @@ export default function Analysis() {
         rolling day. Failed attempts do not count. Pasted resume text is not
         saved in full; reports retain supporting excerpts.
       </div>
-      <div className="detail-grid review-workspace">
+      <div
+        className={`detail-grid review-workspace${historyCollapsed ? " history-collapsed" : ""}`}
+      >
         <section className="card">
           <h2>Compare an opportunity</h2>
           <form
             className="stack"
             onSubmit={(e) => {
               e.preventDefault();
-              review.mutate();
+              if (!busy && !reviewIssues.length) review.mutate();
             }}
           >
             <fieldset disabled={busy} className="review-fields">
@@ -484,66 +530,127 @@ export default function Analysis() {
                 >
                   Add requirement
                 </button>
-                <button
-                  className="primary"
-                  disabled={
-                    (!!applicationId && application.isPending) ||
-                    (source === "pdf" &&
-                      (!preview.data ||
-                        preview.isError ||
-                        preview.variables !== resumeId))
-                  }
-                >
-                  {review.isPending ? "Reviewing…" : "Run free review"}
-                </button>
               </fieldset>
             )}
-            {review.isPending && <p role="status">Reviewing your resume…</p>}
+            <div className="review-submit">
+              {!!reviewIssues.length && (
+                <ul
+                  id="review-guidance"
+                  className="fine-print"
+                  aria-live="polite"
+                >
+                  {reviewIssues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              )}
+              {source === "pdf" && (
+                <p className="fine-print">
+                  PDF text is extracted when you run the review. Previewing is
+                  optional.
+                </p>
+              )}
+              <button
+                type="submit"
+                className="primary"
+                disabled={busy || !!reviewIssues.length}
+                aria-describedby={
+                  reviewIssues.length ? "review-guidance" : undefined
+                }
+              >
+                {review.isPending ? "Reviewing…" : "Run free review"}
+              </button>
+              {review.isPending && <p role="status">Reviewing your resume…</p>}
+            </div>
             {review.isError && <ErrorState error={review.error} />}
           </form>
         </section>
-        <section className="card">
-          <h2>Review history</h2>
-          {history.isPending ? (
-            <Loading />
-          ) : history.isError ? (
-            <ErrorState error={history.error} retry={() => history.refetch()} />
-          ) : history.data.length ? (
-            history.data.map((r) => (
-              <div className="history-item" key={r.id}>
-                <button
-                  className="history-select"
-                  onClick={() => {
-                    setSelected(r);
-                    setStale(true);
-                  }}
-                >
-                  {r.resume?.name ?? "Pasted resume"}
-                  {r.application && ` · ${r.application.company}`}
-                  <small>
-                    {new Date(r.createdAt).toLocaleString()} ·{" "}
-                    {r.status ?? (r.result ? "completed" : "failed")}
-                    {r.mode !== "rules" ? " · Historical report" : ""}
-                  </small>
-                </button>
-                <button onClick={() => setDeleting(r.id)}>Delete</button>
-              </div>
-            ))
-          ) : (
-            <p className="empty">
-              Your saved reviews will appear here. Start with pasted text or an
-              uploaded PDF.
-            </p>
-          )}
-          {remove.isError && <ErrorState error={remove.error} />}
+        <section className="card review-history" aria-label="Review history">
+          <div className="history-heading">
+            <h2 className="history-title">Review history</h2>
+            <button
+              type="button"
+              className="history-toggle icon-tip"
+              onClick={toggleHistory}
+              aria-label={
+                historyCollapsed
+                  ? "Expand review history"
+                  : "Collapse review history"
+              }
+              data-tooltip={
+                historyCollapsed
+                  ? "Expand review history"
+                  : "Collapse review history"
+              }
+              aria-expanded={!historyCollapsed}
+              aria-controls="review-history-content"
+            >
+              {historyCollapsed ? (
+                <History size={20} />
+              ) : (
+                <PanelRightClose size={18} />
+              )}
+              <span className="history-mobile-label">
+                {historyCollapsed ? "Show history" : "Hide history"}
+              </span>
+              <span
+                className="count"
+                aria-label={`${history.data?.length ?? 0} saved reviews`}
+              >
+                {history.data?.length ?? 0}
+              </span>
+              {historyCollapsed && (
+                <PanelRightOpen className="history-expand-icon" size={16} />
+              )}
+            </button>
+          </div>
+          <div id="review-history-content" hidden={historyCollapsed}>
+            {history.isPending ? (
+              <Loading />
+            ) : history.isError ? (
+              <ErrorState
+                error={history.error}
+                retry={() => history.refetch()}
+              />
+            ) : history.data.length ? (
+              history.data.map((r) => (
+                <div className="history-item" key={r.id}>
+                  <button
+                    className="history-select"
+                    onClick={() => {
+                      setSelected(r);
+                      setStale(true);
+                    }}
+                  >
+                    {r.resume?.name ?? "Pasted resume"}
+                    {r.application && ` · ${r.application.company}`}
+                    <small>
+                      {new Date(r.createdAt).toLocaleString()} ·{" "}
+                      {r.status ?? (r.result ? "completed" : "failed")}
+                      {r.mode !== "rules" ? " · Historical report" : ""}
+                    </small>
+                  </button>
+                  <button onClick={() => setDeleting(r.id)}>Delete</button>
+                </div>
+              ))
+            ) : (
+              <p className="empty">
+                Your saved reviews will appear here. Start with pasted text or
+                an uploaded PDF.
+              </p>
+            )}
+            {remove.isError && <ErrorState error={remove.error} />}
+          </div>
         </section>
       </div>
       {reportQuery.isError && <ErrorState error={reportQuery.error} />}
       {displayed && (
-        <ReviewReport
-          report={displayed}
-          stale={stale || !!params.get("reportId")}
-        />
+        <div ref={reportRef} className="review-result-anchor">
+          <ReviewReport
+            report={displayed}
+            stale={stale || !!params.get("reportId")}
+          />
+        </div>
       )}
       {deleting && (
         <Confirm

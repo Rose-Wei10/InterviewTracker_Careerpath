@@ -86,9 +86,33 @@ test("free pasted-text review links to a job, saves snapshots and warns about ch
     animations: "disabled",
   });
 });
-test("uploaded PDF can be previewed and reviewed through private sandbox storage", async ({
+test("uploaded PDF runs without preview, supports optional preview and recovers from storage errors", async ({
   page,
 }) => {
+  await page.setExtraHTTPHeaders({ "x-browser-test-user": "pdf-review-user" });
+  const headers = {
+    Authorization: "Bearer browser-test-token",
+    "x-browser-test-user": "pdf-review-user",
+  };
+  const alternate = await page.request.post(
+    "http://127.0.0.1:5019/api/resumes",
+    {
+      headers,
+      multipart: {
+        name: "ALTERNATE REVIEW PDF",
+        version: "1",
+        resume: {
+          name: "alternate.pdf",
+          mimeType: "application/pdf",
+          buffer: await pdfFixture(
+            "Built NodeJS APIs and deployed services with AWS.",
+          ),
+        },
+      },
+    },
+  );
+  expect(alternate.status()).toBe(201);
+  const alternatePdf = await alternate.json();
   await page.goto("/resumes");
   await page
     .getByRole("button", { name: "Upload resume", exact: true })
@@ -110,12 +134,6 @@ test("uploaded PDF can be previewed and reviewed through private sandbox storage
   await card
     .getByRole("link", { name: "Review for a job", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Preview extracted text", exact: true })
-    .click();
-  await expect(
-    page.getByLabel("Extracted resume text", { exact: true }),
-  ).toHaveValue(/Built React/);
   await page.getByLabel("Job description", { exact: true }).fill(jd);
   await page
     .getByRole("button", { name: "Find requirements", exact: true })
@@ -130,12 +148,38 @@ test("uploaded PDF can be previewed and reviewed through private sandbox storage
   await expect(
     report.getByText("1 of 3 reviewed keywords found", { exact: true }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Preview extracted text", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Extracted resume text", { exact: true }),
+  ).toHaveValue(/Built React/);
+  await page
+    .getByLabel("Resume", { exact: true })
+    .selectOption(alternatePdf.id);
+  await expect(
+    page.getByLabel("Extracted resume text", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Run free review", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Run free review", exact: true })
+    .click();
+  await expect(
+    report.getByRole("heading", { name: "ALTERNATE REVIEW PDF", exact: true }),
+  ).toBeVisible();
+  await expect(
+    report.getByText("2 of 3 reviewed keywords found", { exact: true }),
+  ).toBeVisible();
+  await expect(report).toBeInViewport();
   const resumes = await page.request.get("http://127.0.0.1:5019/api/resumes", {
     headers,
   });
   const pdf = (await resumes.json()).find(
     (r: { name: string }) => r.name === "REVIEW TEST PDF",
   );
+  await page.getByLabel("Resume", { exact: true }).selectOption(pdf.id);
   await page.route(`**/api/resumes/${pdf.id}/text`, (route) =>
     route.fulfill({
       status: 503,

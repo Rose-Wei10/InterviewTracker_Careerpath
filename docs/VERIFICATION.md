@@ -1,5 +1,17 @@
 # Verification record
 
+## Glass workspace and Match fixes — 2026-10-28
+
+- Branch: `Test/glass-match-fixes`. No API/schema/migration changes, paid services, production deployment or GitHub push.
+- `npm run check`: lint, client/server typechecks, 32 unit/component/PDF tests and both builds pass.
+- `npm run preview:review`: 25 isolated PostgreSQL integration tests and 13 Chromium journeys pass; the disposable preview stays on `http://127.0.0.1:5179` with synthetic records only.
+- Browser regressions cover running a private synthetic PDF without preview, optional preview, switching PDFs without re-preview, real extraction results, storage failure/pasted-text fallback, invalid requirements, pending submission lockout, detailed daily quota errors and plain-text minute-rate-limit feedback. Existing linked-report and calendar/application workflows remain passing.
+- Both rails reclaim content width and persist preferences. Navigation tooltips appear on hover/focus; mobile history expands below the form. All pages fit 390/768/1440 px in light/dark themes.
+- Application add/edit, destructive confirmation, ghost review, calendar event and resume upload dialogs are viewport-centered at all three sizes, with native keyboard focus, Escape and focus restoration. Dialog reduced-motion behavior is verified. Screenshots in ignored `test-results/preview/` use synthetic data.
+- Preview restart: `npm run preview:review` creates a new disposable database and reruns the checks; stopping it discards the preview database. Real development and hosted databases are untouched.
+
+Not checked: real hosted Clerk/private Blob/PDF workflows, Safari/Firefox or physical mobile devices. The preview uses a test identity and temporary file storage; it does not establish cloud storage availability.
+
 ## Free resume review — 2026-10-28
 
 - `npm run check`: lint, strict client/server types, 31 unit/component/PDF tests and both production builds pass. Tests include aliases/punctuation and duplicate alias handling, exact excerpts, manual requirements, truthful guidance, legacy report rendering, failed/processing states and production rejection of test-only limit overrides.
