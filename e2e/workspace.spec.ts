@@ -7,17 +7,22 @@ async function centeredDialog(page: Page, compact = false) {
     .poll(async () =>
       dialog.evaluate((el) => {
         const r = el.getBoundingClientRect();
-        return (
-          Math.abs(r.x + r.width / 2 - innerWidth / 2) < 2 &&
-          Math.abs(r.y + r.height / 2 - innerHeight / 2) < 2 &&
-          r.top >= 10 &&
-          r.bottom <= innerHeight - 10 &&
-          r.left >= 15 &&
-          r.right <= innerWidth - 15
-        );
+        return {
+          horizontalOffset: Math.round(
+            Math.abs(r.x + r.width / 2 - innerWidth / 2),
+          ),
+          verticalOffset: Math.round(
+            Math.abs(r.y + r.height / 2 - innerHeight / 2),
+          ),
+          fits:
+            r.top >= 10 &&
+            r.bottom <= innerHeight - 10 &&
+            r.left >= 15 &&
+            r.right <= innerWidth - 15,
+        };
       }),
     )
-    .toBe(true);
+    .toEqual({ horizontalOffset: 0, verticalOffset: 0, fits: true });
   const box = (await dialog.boundingBox())!;
   expect(box.width).toBeLessThanOrEqual(compact ? 440 : 820);
   if (page.viewportSize()!.width === 1440)
@@ -265,4 +270,40 @@ test("plain-text rate limits explain when to retry", async ({ page }) => {
   await expect(page.getByRole("alert")).toContainText(
     "Please wait a minute and try again",
   );
+});
+
+test("flat workspace keeps actions before filtered analytics in both themes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/dashboard");
+  const attention = page.getByRole("heading", { name: /Needs attention/ });
+  const analytics = page.getByRole("heading", {
+    name: "Application analytics",
+    exact: true,
+  });
+  expect((await attention.boundingBox())!.y).toBeLessThan(
+    (await analytics.boundingBox())!.y,
+  );
+  for (const theme of ["light", "dark"]) {
+    if ((await page.locator(".app").getAttribute("data-theme")) !== theme)
+      await page
+        .getByRole("button", {
+          name: theme === "dark" ? "Dark mode" : "Light mode",
+          exact: true,
+        })
+        .click();
+    const styles = await page
+      .locator(".card")
+      .first()
+      .evaluate((el) => {
+        const s = getComputedStyle(el);
+        return {
+          image: s.backgroundImage,
+          blur: s.backdropFilter,
+          shadow: s.boxShadow,
+        };
+      });
+    expect(styles).toEqual({ image: "none", blur: "none", shadow: "none" });
+  }
 });

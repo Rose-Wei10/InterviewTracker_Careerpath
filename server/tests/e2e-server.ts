@@ -17,6 +17,7 @@ if (
   throw new Error("E2E server requires an isolated test DB");
 // The browser sandbox stores synthetic PDFs on disk; it never contacts S3 or Blob.
 process.env.AWS_BUCKET_NAME = "browser-test-only";
+process.env.RESUME_STORAGE_PROVIDER = "s3";
 const storageDir =
   process.env.REVIEW_STORAGE_DIR ??
   mkdtempSync(join(tmpdir(), "tracker-browser-resumes-"));

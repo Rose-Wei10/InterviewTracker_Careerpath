@@ -1,5 +1,17 @@
 # Verification record
 
+## Flat redesign and S3 cutover preparation — 2026-11-02
+
+- Branch: `Test/taste-redesign-blob-migration`. Taste Editorial greeting direction, seed 1978586805; warm-neutral face and application pipeline/agenda signature. Impeccable Operate/craft-floor review applied manually: its context engine was unavailable in the restricted cache. No new runtime dependency.
+- `npm run check`: lint, client/server types, 38 unit/component/PDF tests and both production builds pass. Subsequent final lint/typechecks include the CLI's separate no-emit TypeScript project.
+- `npm run preview:review`: 26 isolated PostgreSQL integration tests and 14 Chromium journeys pass. Tests cover direct PDF review, optional preview, changing PDFs, errors/quota feedback, application/calendar synchronization, 10-row pagination, rail persistence, reduced motion, centered dialogs and both themes at 390/768/1440 px. The centering diagnostic uses absolute offsets to avoid JavaScript negative-zero equality failures.
+- Migration tests cover read-only dry-run, matching-byte readback before reference changes, missing source, interrupted copy/update, checksum mismatch, failed journal, idempotent retries and a real PostgreSQL compare-and-swap conflict with application/report relationships preserved. Blob configuration failures cannot silently select S3 for new uploads.
+- Taste real-browser inspection: zero failures at all three widths on both development preview and the optimized synthetic-auth build. Warm stone palette is explicitly allowed by the approved brief. Remaining built-preview warnings are compact 11–12px metadata, naturally unequal action-panel heights (avoiding empty stretched panels), and space in the fixed chart plot used to align the analytics panels. No gradient/glass or purple finding remains. All five screens and three overview widths were visually reviewed.
+- Synthetic previews: `http://127.0.0.1:5179/dashboard` (development) and `http://127.0.0.1:5180/dashboard` (optimized bundle with local proxy). Both use disposable PostgreSQL, a test identity and temporary file storage. Never deploy the synthetic-auth bundle. Optimized artifacts and inspector screenshots live under `/tmp`; synthetic screenshots are under ignored `test-results/preview/`.
+- Read-only inventory: local DB has 1 readable S3 resume (34,798 bytes); hosted DB has 1 Blob resume (38,774 recorded bytes) and zero S3 references. Vercel confirms Private/Hobby, 38.8 kB stored, 4/10k simple operations, 5/2k advanced operations and 43.8 kB/10 GB transfer. Refresh usage before any actual copy. [Cutover procedure and rollback](RESUME_STORAGE_MIGRATION.md).
+
+No production deployment, migration apply, AWS credential removal, S3 deletion or paid service was performed. Local pre-cutover uploads remain explicitly S3 in the ignored environment file. Hosted Clerk/private storage workflows, physical devices, Safari/Firefox and unreferenced AWS bucket objects were not revalidated.
+
 ## Glass workspace and Match fixes — 2026-10-28
 
 - Branch: `Test/glass-match-fixes`. No API/schema/migration changes, paid services, production deployment or GitHub push.

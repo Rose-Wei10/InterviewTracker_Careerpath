@@ -15,7 +15,10 @@ function bucket() {
   return process.env.AWS_BUCKET_NAME;
 }
 export async function storeResume(key: string, bytes: Buffer) {
-  if (process.env.BLOB_STORE_ID) {
+  const provider = process.env.RESUME_STORAGE_PROVIDER ?? "blob";
+  if (provider === "blob") {
+    if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN)
+      throw new HttpError(503, "Private Blob storage is not configured");
     await put(key, bytes, {
       access: "private",
       contentType: "application/pdf",
@@ -23,6 +26,8 @@ export async function storeResume(key: string, bytes: Buffer) {
     });
     return blobPrefix + key;
   }
+  if (provider !== "s3")
+    throw new HttpError(503, "Unknown resume storage provider");
   await s3.send(
     new PutObjectCommand({
       Bucket: bucket(),

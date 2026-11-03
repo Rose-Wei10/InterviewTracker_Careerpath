@@ -87,7 +87,6 @@ export default function ReviewReport({
     <section className="card review-report" aria-label="Resume review report">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">SAVED REVIEW</p>
           <h2>
             {report.resume?.name ?? "Pasted resume"}
             {report.application ? ` · ${report.application.company}` : ""}

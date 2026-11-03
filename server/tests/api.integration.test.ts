@@ -256,6 +256,7 @@ describe("real PostgreSQL API behavior", () => {
   });
   it("uploads, privately downloads, analyzes and deletes a PDF through scoped endpoints", async () => {
     process.env.AWS_BUCKET_NAME = "test-bucket";
+    vi.stubEnv("RESUME_STORAGE_PROVIDER", "s3");
     process.env.AI_MODE = "demo";
     const r = await as("post", "/api/resumes")
       .field("name", "Engineering v2")

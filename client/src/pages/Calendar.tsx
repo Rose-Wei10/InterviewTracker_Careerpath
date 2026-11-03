@@ -67,7 +67,6 @@ export default function Calendar() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">MAKE ROOM FOR WHAT'S NEXT</p>
           <h1>
             Calendar<span className="heading-dot">.</span>
           </h1>
@@ -212,7 +211,6 @@ export default function Calendar() {
           <section className="card agenda" aria-label="Selected day agenda">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">YOUR DAY</p>
                 <h2>
                   {new Date(selectedDate + "T12:00:00").toLocaleDateString([], {
                     weekday: "long",

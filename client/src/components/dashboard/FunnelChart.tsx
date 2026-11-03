@@ -18,12 +18,6 @@ export default function FunnelChart({
         data={data}
         margin={{ top: 15, right: 15, left: -25, bottom: 0 }}
       >
-        <defs>
-          <linearGradient id="trend" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
         <CartesianGrid
           strokeDasharray="3 5"
           vertical={false}
@@ -51,12 +45,12 @@ export default function FunnelChart({
         />
         <Area
           isAnimationActive={false}
-          type="monotone"
+          type="linear"
           dataKey="count"
           name="Applications"
           stroke="var(--accent)"
           strokeWidth={2.5}
-          fill="url(#trend)"
+          fill="none"
         />
       </AreaChart>
     </ResponsiveContainer>

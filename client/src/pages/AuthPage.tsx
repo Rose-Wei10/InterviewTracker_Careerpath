@@ -9,7 +9,6 @@ export default function AuthPage() {
       <SignedOut>
         <div className="auth-page">
           <div>
-            <p className="eyebrow">CAREERPATH · INTERVIEW TRACKER</p>
             <h1>
               A clearer path
               <br />

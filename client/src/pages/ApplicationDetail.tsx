@@ -56,7 +56,6 @@ export default function ApplicationDetail() {
           <span className={`badge status-${a.status.replace(" ", "-")}`}>
             {a.status}
           </span>
-          <p className="eyebrow">APPLICATION DETAILS</p>
           <h1>{a.company}</h1>
           <p>
             {a.role} · {a.location || "Location not added"}

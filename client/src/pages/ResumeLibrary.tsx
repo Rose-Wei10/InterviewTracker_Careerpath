@@ -37,7 +37,6 @@ export default function ResumeLibrary() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">PUT YOUR BEST EXPERIENCE FORWARD</p>
           <h1>
             Resume library<span className="heading-dot">.</span>
           </h1>

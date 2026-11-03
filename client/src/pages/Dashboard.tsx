@@ -51,7 +51,6 @@ export default function Dashboard() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">A CLEARER PATH FORWARD</p>
           <h1>
             Your job search, at a glance<span className="heading-dot">.</span>
           </h1>
@@ -69,45 +68,90 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
-      <div className="section-heading overview-heading">
-        <h2>Overview</h2>
-        <label className="inline-label">
-          Date range{" "}
-          <select value={range} onChange={(e) => setRange(e.target.value)}>
-            <option value="30">Last 30 days</option>
-            <option value="90">Last 90 days</option>
-            <option value="365">Last year</option>
-            <option value="all">All time</option>
-            <option value="custom">Custom dates</option>
-          </select>
-        </label>
-      </div>
-      {range === "custom" && (
-        <div className="filters">
-          <label>
-            From
-            <input
-              type="date"
-              value={custom.from}
-              onChange={(e) => setCustom({ ...custom, from: e.target.value })}
-            />
-          </label>
-          <label>
-            To
-            <input
-              type="date"
-              value={custom.to}
-              onChange={(e) => setCustom({ ...custom, to: e.target.value })}
-            />
-          </label>
-        </div>
-      )}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
         <ErrorState error={query.error} retry={() => query.refetch()} />
       ) : (
         <>
+          <div className="section-kicker">
+            <h2>Your action center</h2>
+            <p>
+              What needs attention now · Independent of the analytics date range
+            </p>
+          </div>
+          <div className="below-grid">
+            <section className="card">
+              <div className="section-heading">
+                <h2>
+                  Needs attention{" "}
+                  <span className="count">{query.data.attentionCount}</span>
+                </h2>
+              </div>
+              <p className="muted">
+                Due reminders and overdue unfinished events
+              </p>
+              <EventList
+                items={query.data.attention}
+                onEdit={setEventEditing}
+                empty="You're all caught up. No event reminders need attention."
+              />
+              {query.data.attentionCount > query.data.attention.length && (
+                <Link to="/calendar?view=attention">
+                  View all {query.data.attentionCount} events needing attention
+                  →
+                </Link>
+              )}
+            </section>
+            <section className="card">
+              <div className="section-heading">
+                <h2>
+                  Upcoming events{" "}
+                  <span className="count">{query.data.upcomingCount}</span>
+                </h2>
+                <Link to="/calendar">View calendar →</Link>
+              </div>
+              <p className="muted">Your next seven days</p>
+              <EventList items={query.data.upcoming} onEdit={setEventEditing} />
+            </section>
+            <GhostReview count={query.data.ghostCount} />
+          </div>
+          <div className="section-heading overview-heading">
+            <h2>Application analytics</h2>
+            <label className="inline-label">
+              Date range{" "}
+              <select value={range} onChange={(e) => setRange(e.target.value)}>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365">Last year</option>
+                <option value="all">All time</option>
+                <option value="custom">Custom dates</option>
+              </select>
+            </label>
+          </div>
+          {range === "custom" && (
+            <div className="filters">
+              <label>
+                From
+                <input
+                  type="date"
+                  value={custom.from}
+                  onChange={(e) =>
+                    setCustom({ ...custom, from: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                To
+                <input
+                  type="date"
+                  value={custom.to}
+                  onChange={(e) => setCustom({ ...custom, to: e.target.value })}
+                />
+              </label>
+            </div>
+          )}
+
           <StatCards data={query.data} applicationUrl={applicationUrl} />
           <div className="chart-grid">
             <section className="card">
@@ -165,48 +209,6 @@ export default function Dashboard() {
                 inferred from current status alone.
               </p>
             </section>
-          </div>
-          <div className="section-kicker">
-            <h2>Your action center</h2>
-            <p>
-              What needs attention now · Independent of the analytics date range
-            </p>
-          </div>
-          <div className="below-grid">
-            <section className="card">
-              <div className="section-heading">
-                <h2>
-                  Needs attention{" "}
-                  <span className="count">{query.data.attentionCount}</span>
-                </h2>
-              </div>
-              <p className="muted">
-                Due reminders and overdue unfinished events
-              </p>
-              <EventList
-                items={query.data.attention}
-                onEdit={setEventEditing}
-                empty="You're all caught up. No event reminders need attention."
-              />
-              {query.data.attentionCount > query.data.attention.length && (
-                <Link to="/calendar?view=attention">
-                  View all {query.data.attentionCount} events needing attention
-                  →
-                </Link>
-              )}
-            </section>
-            <section className="card">
-              <div className="section-heading">
-                <h2>
-                  Upcoming events{" "}
-                  <span className="count">{query.data.upcomingCount}</span>
-                </h2>
-                <Link to="/calendar">View calendar →</Link>
-              </div>
-              <p className="muted">Your next seven days</p>
-              <EventList items={query.data.upcoming} onEdit={setEventEditing} />
-            </section>
-            <GhostReview count={query.data.ghostCount} />
           </div>
           <div className="dashboard-activity">
             <ActivityFeed data={query.data.recent.slice(0, 4)} />

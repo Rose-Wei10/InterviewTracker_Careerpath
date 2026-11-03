@@ -81,3 +81,12 @@ it("rejects missing and oversized private objects before reading their content",
     "size limit",
   );
 });
+it("never falls back to S3 when the default Blob connection is missing", async () => {
+  vi.stubEnv("BLOB_STORE_ID", "");
+  vi.stubEnv("BLOB_READ_WRITE_TOKEN", "");
+  vi.stubEnv("RESUME_STORAGE_PROVIDER", "blob");
+  await expect(storeResume("new.pdf", Buffer.from("%PDF-"))).rejects.toThrow(
+    "Blob storage is not configured",
+  );
+  expect(put).not.toHaveBeenCalled();
+});

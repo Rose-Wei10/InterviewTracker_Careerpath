@@ -475,7 +475,7 @@ test("all workspace pages fit mobile, tablet and desktop in both themes", async 
     await dialog.evaluate(
       (element) => getComputedStyle(element).backgroundColor,
     ),
-  ).toBe(isDark ? "rgba(25, 33, 55, 0.9)" : "rgba(255, 255, 255, 0.85)");
+  ).toBe(isDark ? "rgb(34, 37, 35)" : "rgb(255, 255, 255)");
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(

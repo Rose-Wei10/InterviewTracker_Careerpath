@@ -216,7 +216,6 @@ export default function Analysis() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">A THOUGHTFUL SECOND LOOK</p>
           <h1>
             Find your fit<span className="heading-dot">.</span>
           </h1>

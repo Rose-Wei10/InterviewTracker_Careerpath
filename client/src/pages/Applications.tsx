@@ -133,7 +133,6 @@ export default function Applications() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">ONE PLACE FOR EVERY OPPORTUNITY</p>
           <h1>
             Applications<span className="heading-dot">.</span>
           </h1>

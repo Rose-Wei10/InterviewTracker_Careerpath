@@ -11,6 +11,7 @@ const schema = z.object({
   CLERK_SECRET_KEY: z.string().min(1),
   AWS_REGION: z.string().default("us-east-1"),
   AWS_BUCKET_NAME: z.string().optional(),
+  RESUME_STORAGE_PROVIDER: z.enum(["blob", "s3"]).default("blob"),
   EMAIL_PROVIDER: z.enum(["console", "ses"]).default("console"),
   EMAIL_FROM: z.string().email().optional(),
 });

@@ -64,7 +64,6 @@ export default function Layout() {
           )}
           <span className="navigation-label">Collapse menu</span>
         </button>
-        <p className="eyebrow">YOUR WORKSPACE</p>
         <nav id="workspace-navigation" aria-label="Main navigation">
           <NavLink
             to="/dashboard"

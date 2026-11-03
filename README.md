@@ -24,6 +24,10 @@ Screenshots below show the previous release. Current review screenshots are gene
 ![Desktop overview](docs/screenshots/dashboard-desktop.png)
 ![Mobile overview](docs/screenshots/dashboard-mobile.png)
 
+## Storage cutover
+
+New uploads default to private Vercel Blob; missing configuration fails explicitly. For temporary local/pre-cutover S3 uploads, set `RESUME_STORAGE_PROVIDER=s3`. Existing S3 records remain readable. The manual, dry-run-first migration command and current inventory are documented in [resume storage migration](docs/RESUME_STORAGE_MIGRATION.md); never run apply during a build or deployment.
+
 ## Stack and architecture
 
 React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Tailwind CSS 4, Recharts and Lucide. Express 5 + TypeScript, Zod, Prisma 5 + PostgreSQL, Clerk, AWS SDK v3 S3/SES, and retained legacy reminder history. Vitest, Testing Library, Supertest, Playwright and GitHub Actions cover quality checks.
