@@ -8,8 +8,8 @@
     sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  color: #242824;
-  background: #f5f5f1;
+  color: #20264a;
+  background: #f9f6ff;
   font-size: 14px;
 }
 * {
@@ -116,13 +116,13 @@ time {
   color: var(--muted, #5e655f);
 }
 .app {
-  --bg: #f5f5f1;
-  --surface: #fff;
-  --text: #242824;
-  --muted: #5e655f;
-  --border: #dfe2dc;
-  --accent: #196b60;
-  --soft: #e9ece8;
+  --bg: #f9f6ff;
+  --surface: #f6f8ff;
+  --text: #20264a;
+  --muted: #606985;
+  --border: #e1e5f5;
+  --accent: #6250d5;
+  --soft: #eeebfc;
   color-scheme: light;
   --shadow: 0 6px 24px #303d7410;
   background: var(--bg);
@@ -131,13 +131,13 @@ time {
   display: flex;
 }
 .app[data-theme="dark"] {
-  --bg: #191b1a;
-  --surface: #222523;
-  --text: #f1f3ef;
-  --muted: #b5bdb6;
-  --border: #424941;
-  --accent: #85d4bf;
-  --soft: #303630;
+  --bg: #191827;
+  --surface: #252438;
+  --text: #f4f2ff;
+  --muted: #bfc3db;
+  --border: #4c4a68;
+  --accent: #bdb3ff;
+  --soft: #36324d;
   --shadow: 0 6px 24px #00000020;
   background: var(--bg);
   color-scheme: dark;
@@ -297,12 +297,12 @@ main {
   margin-top: 12px;
 }
 .heading-dot {
-  color: #196b60;
+  color: var(--accent);
 }
 .primary {
   background: #196b60;
   color: #fff;
-  border-color: #196b60;
+  border-color: var(--accent);
   font-size: 12px;
   padding: 12px 18px;
 }
@@ -732,7 +732,7 @@ dd {
   color: var(--accent);
 }
 blockquote {
-  border-left: 2px solid #196b60;
+  border-left: 2px solid var(--accent);
   padding: 10px 18px;
   margin: 14px 0;
   background: var(--bg);
@@ -903,7 +903,7 @@ footer {
 .auth-page h1 {
   font-size: 48px;
   line-height: 1.18;
-  color: #196b60;
+  color: var(--accent);
 }
 .auth-page p {
   margin: 20px 0;
@@ -1495,7 +1495,7 @@ button.calendar-event span {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  accent-color: #196b60;
+  accent-color: var(--accent);
 }
 .ghost-banner {
   border: 1px solid var(--border);
@@ -1527,7 +1527,7 @@ button.calendar-event span {
   margin: 1rem 0;
 }
 .ghost-table .row-selected {
-  background: color-mix(in srgb, #196b60 12%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .load-events {
   text-align: center;
@@ -1917,7 +1917,7 @@ dialog .modal-actions {
   }
 }
 
-/* Flat Careerpath workspace: actions first, evidence second. */
+/* Pastel workspace: preserve layout and content, soften surfaces. */
 .app {
   --shadow: none;
 }
@@ -1925,10 +1925,10 @@ dialog .modal-actions {
   --shadow: none;
 }
 .sidebar {
-  background: var(--bg);
+  background: var(--panel);
 }
 .topbar {
-  background: var(--bg);
+  background: var(--panel);
   height: 52px;
 }
 main {
@@ -1959,49 +1959,48 @@ nav a {
 nav a.active {
   color: var(--text);
   background: var(--soft);
-  box-shadow: none;
+  box-shadow: var(--shadow);
 }
 .card,
 .stat-card,
 .detail-heading,
 .ghost-banner {
-  box-shadow: none;
-  border-radius: 12px;
+  box-shadow: var(--shadow);
+  border-radius: 20px;
 }
 button,
 .button {
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: 10px;
 }
 button:not(:disabled):hover,
 .button:hover,
 .stat-card:hover {
-  box-shadow: none;
+  box-shadow: var(--shadow);
   filter: none;
   background: var(--soft);
 }
 .primary {
-  background: var(--text);
-  color: var(--surface);
-  border-color: var(--text);
-  box-shadow: none;
+  background: linear-gradient(135deg, var(--purple), var(--indigo));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: var(--shadow);
 }
 .primary:not(:disabled):hover {
-  background: var(--text);
-  color: var(--surface);
-  filter: brightness(1.15);
+  background: linear-gradient(135deg, var(--purple), var(--indigo));
+  color: #fff;
+  filter: brightness(0.94);
 }
 .stats {
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--surface);
+  gap: 14px;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 .stat-card {
-  border: 0;
-  border-right: 1px solid var(--border);
-  border-radius: 0;
+  border: 1px solid var(--highlight);
+  border-radius: 18px;
   padding: 16px 20px;
 }
 .stat-card:last-child {
@@ -2056,7 +2055,7 @@ td,
 input,
 select,
 textarea {
-  border-radius: 6px;
+  border-radius: 10px;
   caret-color: var(--accent);
 }
 input::placeholder,
@@ -2096,11 +2095,9 @@ textarea::placeholder {
   .stat-card:nth-child(2) {
     border-right: 0;
   }
-  .stat-card:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--border);
-  }
+
   nav a.active {
-    box-shadow: none;
+    box-shadow: var(--shadow);
   }
   h1 {
     font-size: 24px;
@@ -2144,4 +2141,272 @@ textarea::placeholder {
 .stat-label,
 .event-open time {
   font-size: 13px;
+}
+
+/* Reference palette; darker foreground roles keep small text readable. */
+.app {
+  --pink: #ffccff;
+  --purple: #a49aff;
+  --blue: #b7e3ff;
+  --lavender: #e4baff;
+  --indigo: #6f5de8;
+  --panel: #ffffff;
+  --panel-glass: #ffffffd9;
+  --highlight: #ffffffdf;
+  --shadow: 6px 8px 22px #7d87be18, -4px -4px 16px #ffffffb3;
+  background: linear-gradient(135deg, #fff4fc 0%, #f4f0ff 48%, #eef7ff 100%);
+  isolation: isolate;
+}
+.app::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 10% 8%, #ffccff66, transparent 38%),
+    radial-gradient(ellipse at 94% 12%, #b7e3ff80, transparent 40%),
+    radial-gradient(ellipse at 76% 94%, #a49aff33, transparent 42%);
+}
+.app[data-theme="dark"] {
+  --panel: #252438;
+  --panel-glass: #252438ed;
+  --highlight: #65607c;
+  --purple: #7865c5;
+  --indigo: #5946b9;
+  --shadow: 6px 8px 22px #09081345, -3px -3px 12px #ffffff05;
+  background: linear-gradient(135deg, #231d32, #191b2d 55%, #182534);
+}
+.app[data-theme="dark"]::before {
+  opacity: 0.12;
+}
+.sidebar {
+  background:
+    radial-gradient(ellipse at 0% 100%, #e4baff40, transparent 40%),
+    var(--panel);
+  border-right: 1px solid var(--highlight);
+  box-shadow: 5px 0 20px #7d87be12;
+}
+.card,
+.stat-card,
+.detail-heading,
+.ghost-banner,
+dialog {
+  background: var(--panel);
+  border-color: var(--highlight);
+}
+@supports (backdrop-filter: blur(12px)) {
+  .card,
+  .stat-card,
+  .detail-heading,
+  .ghost-banner,
+  dialog,
+  .topbar {
+    background: var(--panel-glass);
+    backdrop-filter: blur(12px);
+  }
+}
+nav a.active {
+  color: var(--accent);
+  background: linear-gradient(90deg, #e4baff61, #a49aff29);
+}
+[data-theme="dark"] nav a.active {
+  background: linear-gradient(90deg, #57407580, #49416c70);
+}
+.primary {
+  box-shadow: 0 4px 10px #6f5de82b;
+  font-weight: 650;
+}
+/* White text needs the darker end of the supplied gradient beneath its label. */
+.primary {
+  background: linear-gradient(135deg, #7964da, #6f5de8);
+}
+[data-theme="dark"] .primary {
+  background: linear-gradient(135deg, #7865c5, #5946b9);
+}
+.primary:not(:disabled):hover {
+  background: linear-gradient(135deg, #7561da, #6250d5);
+}
+button:not(:disabled):hover,
+.button:hover {
+  border-color: var(--accent);
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline-color: var(--accent);
+}
+input,
+select,
+textarea {
+  background: var(--surface);
+  border-color: var(--border);
+}
+.stat-label {
+  align-items: center;
+  gap: 8px;
+}
+.stat-label svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.stat-card:nth-child(2) .stat-label svg {
+  color: #287eab;
+}
+.stat-card:nth-child(3) .stat-label svg {
+  color: #a64f91;
+}
+.stat-card:nth-child(4) .stat-label svg {
+  color: #b06a14;
+}
+[data-theme="dark"] .stat-label svg {
+  color: var(--accent);
+}
+.stat-card h2 {
+  font-weight: 600;
+}
+.application-table th {
+  background: var(--soft);
+}
+.application-table tbody tr:hover {
+  background: var(--soft);
+}
+.application-table select {
+  border-radius: 10px;
+}
+.category-oa {
+  background: #e1f1ff;
+  color: #295b7e;
+}
+.category-interview {
+  background: #ebe5ff;
+  color: #574298;
+}
+.category-other {
+  background: #e5f5f7;
+  color: #285e64;
+}
+[data-theme="dark"] .category-oa {
+  background: #263c54;
+  color: #b7e3ff;
+}
+[data-theme="dark"] .category-interview {
+  background: #40315b;
+  color: #ddceff;
+}
+[data-theme="dark"] .category-other {
+  background: #26444b;
+  color: #b9e8ef;
+}
+.calendar-day.selected {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--soft);
+}
+.resume-card .file-icon {
+  background: var(--soft);
+  border-color: var(--highlight);
+  color: var(--accent);
+  border-radius: 14px;
+}
+.resume-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+dialog label:has(input[type="file"]) {
+  border: 1px dashed var(--accent);
+  border-radius: 16px;
+  padding: 22px;
+  background: var(--soft);
+}
+dialog input[type="file"] {
+  border: 0;
+  padding: 12px 0 0;
+  background: transparent;
+}
+::selection {
+  background: #e4baff;
+  color: #20264a;
+}
+@media (prefers-reduced-motion: reduce) {
+  .resume-card:hover {
+    transform: none;
+  }
+}
+
+.application-table select[class*="status-"] {
+  font-weight: 550;
+}
+.application-table .status-Applied,
+.badge.status-Applied {
+  background: #eee7ff;
+  color: #514084;
+}
+.application-table .status-OA,
+.badge.status-OA {
+  background: #e3f1ff;
+  color: #295b7e;
+}
+.application-table .status-Interview,
+.badge.status-Interview {
+  background: #e0f4f7;
+  color: #255f68;
+}
+.application-table .status-Final-Round,
+.badge.status-Final-Round {
+  background: #e9e3fb;
+  color: #5a4283;
+}
+.application-table .status-Offer,
+.badge.status-Offer {
+  background: #e0f3ed;
+  color: #206454;
+}
+.application-table .status-Reject,
+.badge.status-Reject {
+  background: #ffe7ee;
+  color: #8c3756;
+}
+.application-table .status-Ghosted,
+.badge.status-Ghosted {
+  background: #eaeaf1;
+  color: #545968;
+}
+[data-theme="dark"] .application-table select[class*="status-"],
+[data-theme="dark"] .badge[class*="status-"] {
+  background: var(--soft);
+  color: var(--text);
+}
+@supports (backdrop-filter: blur(12px)) {
+  .sidebar {
+    background:
+      radial-gradient(ellipse at 0% 100%, #e4baff40, transparent 40%),
+      var(--panel-glass);
+    backdrop-filter: blur(12px);
+  }
+}
+.stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.stat-card {
+  min-width: 0;
+}
+@media (max-width: 1150px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stat-label {
+    flex-wrap: wrap;
+  }
+}
+/* Preserve the existing mark rather than adopting the example's C logo. */
+.brand {
+  color: #242824;
+}
+[data-theme="dark"] .brand {
+  color: #f1f3ef;
+}
+.brand-icon {
+  color: inherit;
 }

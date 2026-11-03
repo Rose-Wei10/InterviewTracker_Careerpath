@@ -1,27 +1,27 @@
-# Careerpath workspace
+# Careerpath workspace — soft pastel reference
 
-Mode: Operate. Personal job search, used for daily planning and focused application updates.
+Mode: Operate. The user’s supplied pastel-gradient/neumorphism brief is the visual authority, overriding the earlier flat teal direction and generic Taste preferences against gradients, glass and raised panels.
 
-Taste direction: Editorial greeting, seed 1978586805, workspace/open plane. The full redesign replaces the previous glass world. Warm stone surfaces are its face; the application pipeline and next-seven-days agenda are its signature. Typography stays the existing system sans because this is a working interface, not a marketing page. Existing top account controls and mobile destination navigation remain for familiarity and keyboard access; they are exceptions to the sheet's no-topbar/mobile-menu composition.
+## Preserve
 
-## Tokens
+Keep the existing Careerpath briefcase logo, spelling/capitalization, wording, page titles, navigation labels, account controls, routes, page structure, data and workflows. The reference image is styling inspiration, not a specification for new product content. Do not introduce its example counts, C logo, Analytics destination, notifications, search, DOCX uploads or drag-and-drop behavior. Keep Overview's action-first ordering and both collapse controls. No backend, API, storage or schema changes belong to this update.
 
-| Role | Light | Dark |
-|---|---|---|
-| Ground | #f5f5f1 | #191b1a |
-| Surface | #ffffff | #222523 |
-| Text | #242824 | #f1f3ef |
-| Secondary | #5e655f | #b5bdb6 |
-| Rule | #dfe2dc | #424941 |
-| Accent/data | #196b60 | #85d4bf |
-| Selected surface | #e9ece8 | #303630 |
+## Palette and surfaces
 
-Use 26px page headings, 16px section headings, 14px body and controls, 12px labels and metadata (11px minimum). Regular-weight tabular numbers, restrained teal data, neutral active navigation and one dark primary action. No decorative gradients, glass, KPI icons or resting-card shadows. Semantic warnings and errors may use amber/red.
+Reference tokens: pink #FFCCFF; purple #A49AFF; blue #B7E3FF; lavender #E4BAFF; action indigo #6F5DE8; surface #F6F8FF; card #FFFFFF; border #EEF1FF; background tint #F9F6FF; text #20264A; secondary #69718F. Small secondary text uses a darker #606985 role over layered backgrounds. Control borders are one step stronger than decorative borders.
 
-## Layout and interaction
+The ground blends #FFF4FC, #F4F0FF and #EEF7FF, with static radial pink/blue/lavender shapes. Shapes never intercept input or create horizontal overflow. Cards use translucent white, 18–20px radii, white edge highlights and low-opacity offset shadows. Opaque fallback surfaces remain when backdrop filtering is unsupported. Use stronger text contrast inside controls and dense tables.
 
-Overview answers “what needs attention next?” before showing selected-range analytics. Upcoming/overdue events and 30-day review stay independent of analytics filters. Statistics share one divided strip. Tables keep clear identity columns, sentence-case headings and rules. Forms group labels with inputs; validation stays beside the action. Calendar leads with agenda and event creation; Resume/Match retain their evidence-first workflow.
+Primary actions retain white text, using a darker #7964DA–#6F5DE8 rendering of the reference gradient: the supplied #A49AFF endpoint alone only gives 2.43:1 contrast with white; the adjusted endpoint gives 4.52:1. Pastel purple remains in background decoration and active navigation. Do not rely on shadow for text contrast.
 
-Retain 10-row pagination, history, both collapse preferences, private workspace/account controls and native dialogs. Dialogs center at 820px maximum (440px confirmations), scroll internally and restore focus. Controls use 150–200ms state transitions; reduced motion removes them. At 390px, content stacks and tables stay within their own frame. At 768px narrow panels stack. Never invent statistics or hide missing/zero data.
+Dark mode is independently authored: deep plum/slate grounds, opaque-enough dark panels, light neutral text, pale purple active/focus roles and subdued highlights. It is not a filter inversion.
 
-Validate both themes at 390, 768 and 1440px using synthetic data. Review all pages, keyboard focus, errors, loading, empty states and direct PDF review.
+## Components and behavior
+
+Keep existing font family and type scale. Statistics become separate softly raised peers with Lucide icons; values/calculations are unchanged. The existing linear activity chart gets a bounded, faint gradient fill without changing its data or interpolation. Applications retain every column and native status editing, with pastel status colors. The calendar keeps all date/time behavior and gets pastel selected/event states. Resume cards and the existing file-picker area receive soft elevation and a dashed upload treatment; existing upload validation is unchanged.
+
+Transitions remain short, with at most a 2px resume-card hover lift. Reduced-motion disables it. Native centered dialogs, keyboard focus, selection tooltips and mobile history behavior remain. At tablet/mobile widths the metric cards use two columns to prevent label/icon overflow; all page content remains available. No new runtime dependency.
+
+## Verification
+
+Check all pages at 390/768/1440px in light and dark, including long labels, empty/error/loading states, status changes, upload and review, pagination, collapsed panels and keyboard dialogs. Visual reference requirements override mechanical anti-gradient or anti-shadow findings; contrast, overflow and accessibility findings still need correction.

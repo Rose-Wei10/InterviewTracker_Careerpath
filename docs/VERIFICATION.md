@@ -1,5 +1,17 @@
 # Verification record
 
+## Pastel styling reference — 2026-11-03
+
+- Branch: `Test/pastel-workspace`. The user's latest reference brief replaces the flat teal style while explicitly preserving the current logo, wording, navigation, layouts, data and features. No backend/storage/schema/API or dependency changes.
+- Updated shared palette, static pastel background shapes, translucent rounded panels, restrained offset shadows, dark surfaces, native status colors, metric icons, chart fill and the existing file-picker presentation. No reference-image sample data, C logo, renamed routes, new upload formats or drag/drop behavior was introduced.
+- `RESUME_STORAGE_PROVIDER=blob npm run check`: lint, client/server/script types, all 38 unit/component tests and both builds pass. The explicit environment setting isolates unit tests from the local pre-cutover S3 provider; backend source and local environment files were not changed in this styling update.
+- `npm run preview:review`: 26 PostgreSQL integration tests and 14 Chromium journeys pass on a new disposable database. Existing screenshots cover 390/768/1440 px, both themes, upload/review, application/calendar synchronization, per-page review selection, table pagination, native dialogs, collapse persistence and reduced motion. The tablet metric grid now uses two columns to avoid label/icon overflow.
+- Taste inspection treats `button-fx` and `heavy-shadow` as explicit reference-style exceptions: gradient actions and softly raised panels are requested. Text-shadow was removed; real text contrast is preserved without it. Compact metadata and natural panel-height differences remain intentional.
+- White primary-label contrast is at least 4.52:1 at the gradient endpoints; the light #A49AFF reference endpoint remains decorative rather than sitting directly under white text (2.43:1). Secondary text is slightly darker than the reference on translucent panels for readability. Theme-specific surfaces and opaque fallbacks preserve contrast.
+- Preview uses test-only Clerk and temporary file storage: `http://127.0.0.1:5179/dashboard`. Screenshots are synthetic under ignored `test-results/preview/`. Never deploy the test identity or its bundle.
+
+Not deployed or pushed. Real hosted auth/storage, physical devices and Safari/Firefox were not revalidated. Existing S3 migration preparation remains unchanged and no migration was applied.
+
 ## Flat redesign and S3 cutover preparation — 2026-11-02
 
 - Branch: `Test/taste-redesign-blob-migration`. Taste Editorial greeting direction, seed 1978586805; warm-neutral face and application pipeline/agenda signature. Impeccable Operate/craft-floor review applied manually: its context engine was unavailable in the restricted cache. No new runtime dependency.

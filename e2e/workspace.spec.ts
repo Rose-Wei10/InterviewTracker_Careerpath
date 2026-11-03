@@ -272,7 +272,7 @@ test("plain-text rate limits explain when to retry", async ({ page }) => {
   );
 });
 
-test("flat workspace keeps actions before filtered analytics in both themes", async ({
+test("pastel workspace keeps actions before filtered analytics in both themes", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -304,6 +304,12 @@ test("flat workspace keeps actions before filtered analytics in both themes", as
           shadow: s.boxShadow,
         };
       });
-    expect(styles).toEqual({ image: "none", blur: "none", shadow: "none" });
+    expect(styles.shadow).not.toBe("none");
+    expect(styles.blur).toBe("blur(12px)");
+    expect(
+      await page
+        .locator(".app")
+        .evaluate((el) => getComputedStyle(el).backgroundImage),
+    ).toContain("linear-gradient");
   }
 });

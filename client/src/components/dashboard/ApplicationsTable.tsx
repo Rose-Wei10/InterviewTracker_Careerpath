@@ -51,6 +51,7 @@ export default function ApplicationsTable({
                     <div className="status-control">
                       <select
                         aria-label={`Status for ${a.company}`}
+                        className={`status-${a.status.replace(" ", "-")}`}
                         value={a.status}
                         disabled={!!pendingId}
                         onChange={(e) =>
