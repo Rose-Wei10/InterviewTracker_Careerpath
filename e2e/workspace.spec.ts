@@ -272,7 +272,7 @@ test("plain-text rate limits explain when to retry", async ({ page }) => {
   );
 });
 
-test("pastel workspace keeps actions before filtered analytics in both themes", async ({
+test("pastel workspace puts metrics and funnel above reminders in both themes", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -282,9 +282,31 @@ test("pastel workspace keeps actions before filtered analytics in both themes", 
     name: "Application analytics",
     exact: true,
   });
-  expect((await attention.boundingBox())!.y).toBeLessThan(
-    (await analytics.boundingBox())!.y,
+  await expect(analytics).toBeVisible();
+  await expect(page.locator(".stat-label")).toHaveText([
+    "Total applications",
+    "Interviews",
+    "Offers received",
+    "Response rate",
+  ]);
+  const funnel = page.getByRole("heading", { name: "Your application funnel" });
+  expect((await funnel.boundingBox())!.y).toBeLessThan(
+    (await attention.boundingBox())!.y,
   );
+  await expect(
+    page.locator(".sidebar-bottom").getByLabel("Test account"),
+  ).toBeVisible();
+  await expect(page.locator(".topbar")).toHaveText("Careerpath/ Overview");
+  await expect(page.locator(".topbar")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  const brand = (await page.locator(".sidebar-brand .brand").boundingBox())!;
+  const toggle = (await page
+    .getByRole("button", { name: "Collapse navigation" })
+    .boundingBox())!;
+  expect(toggle.x).toBeGreaterThanOrEqual(brand.x + brand.width);
+  expect(Math.abs(toggle.y - brand.y)).toBeLessThan(3);
   for (const theme of ["light", "dark"]) {
     if ((await page.locator(".app").getAttribute("data-theme")) !== theme)
       await page
@@ -311,5 +333,16 @@ test("pastel workspace keeps actions before filtered analytics in both themes", 
         .locator(".app")
         .evaluate((el) => getComputedStyle(el).backgroundImage),
     ).toContain("linear-gradient");
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+      await page.screenshot({
+        path: `test-results/preview/reference-overview-${width}-${theme}.png`,
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
   }
 });

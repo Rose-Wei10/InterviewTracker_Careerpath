@@ -4,7 +4,7 @@ Mode: Operate. The user’s supplied pastel-gradient/neumorphism brief is the vi
 
 ## Preserve
 
-Keep the existing Careerpath briefcase logo, spelling/capitalization, wording, page titles, navigation labels, account controls, routes, page structure, data and workflows. The reference image is styling inspiration, not a specification for new product content. Do not introduce its example counts, C logo, Analytics destination, notifications, search, DOCX uploads or drag-and-drop behavior. Keep Overview's action-first ordering and both collapse controls. No backend, API, storage or schema changes belong to this update.
+Keep the existing Careerpath briefcase logo, spelling/capitalization, wording, page titles, navigation labels, account controls, routes, page structure, data and workflows. The reference image is styling inspiration, not a specification for new product content. Do not introduce its example counts, C logo, Analytics destination, notifications, search, DOCX uploads or drag-and-drop behavior. Keep both collapse controls. Put the navigation toggle next to the brand and the account above the theme toggle on desktop. The transparent Careerpath breadcrumb shares the page background. On Overview, put the four metrics first, pair the application funnel with recent activity, then show the full-width trend and action center. Keep the interview rate beside the current-stage interview count and label the date filters separately from unfiltered reminders. No backend, API, storage or schema changes belong to this update.
 
 ## Palette and surfaces
 

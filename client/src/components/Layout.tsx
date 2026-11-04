@@ -1,5 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
-import { UserButton } from "@clerk/clerk-react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { UserButton, useUser } from "@clerk/clerk-react";
 import {
   BriefcaseBusiness,
   LayoutDashboard,
@@ -8,11 +8,23 @@ import {
   Sparkles,
   Sun,
   Moon,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { useState } from "react";
+const workspacePages: Record<string, string> = {
+  dashboard: "Overview",
+  applications: "Applications",
+  calendar: "Calendar",
+  resumes: "Resumes",
+  analysis: "Match",
+};
+
 export default function Layout() {
+  const { pathname } = useLocation();
+  const { user } = useUser();
+  const page = workspacePages[pathname.split("/")[1]];
+  const accountName = user?.fullName || user?.firstName;
   const [dark, setDark] = useState(
     () => localStorage.getItem("theme") === "dark",
   );
@@ -37,33 +49,36 @@ export default function Layout() {
         Skip to content
       </a>
       <aside className="sidebar">
-        <NavLink
-          className="brand"
-          to="/dashboard"
-          aria-label="Careerpath overview"
-        >
-          <span className="brand-icon">
-            <BriefcaseBusiness size={22} />
-          </span>
-          <span className="navigation-label">
-            Career<span className="brand-soft">path</span>
-          </span>
-        </NavLink>
-        <button
-          className="navigation-toggle icon-tip"
-          onClick={toggleNavigation}
-          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
-          aria-expanded={!collapsed}
-          aria-controls="workspace-navigation"
-          data-tooltip={collapsed ? "Expand navigation" : "Collapse navigation"}
-        >
-          {collapsed ? (
-            <PanelLeftOpen size={18} />
-          ) : (
-            <PanelLeftClose size={18} />
-          )}
-          <span className="navigation-label">Collapse menu</span>
-        </button>
+        <div className="sidebar-brand">
+          <NavLink
+            className="brand"
+            to="/dashboard"
+            aria-label="Careerpath overview"
+          >
+            <span className="brand-icon">
+              <BriefcaseBusiness size={22} />
+            </span>
+            <span className="navigation-label">
+              Career<span className="brand-soft">path</span>
+            </span>
+          </NavLink>
+          <button
+            className="navigation-toggle icon-tip"
+            onClick={toggleNavigation}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+            aria-expanded={!collapsed}
+            aria-controls="workspace-navigation"
+            data-tooltip={
+              collapsed ? "Expand navigation" : "Collapse navigation"
+            }
+          >
+            {collapsed ? (
+              <ChevronsRight size={18} />
+            ) : (
+              <ChevronsLeft size={18} />
+            )}
+          </button>
+        </div>
         <nav id="workspace-navigation" aria-label="Main navigation">
           <NavLink
             to="/dashboard"
@@ -112,9 +127,11 @@ export default function Layout() {
           </NavLink>
         </nav>
         <div className="sidebar-bottom">
-          <div className="workspace-note">
-            <span className="dot" /> Your next chapter starts here.
-            <p>Make every application count.</p>
+          <div className="sidebar-account">
+            <UserButton />
+            {accountName && (
+              <span className="navigation-label">{accountName}</span>
+            )}
           </div>
           <button
             className="theme-toggle icon-tip"
@@ -131,13 +148,12 @@ export default function Layout() {
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <span>
-            Personal workspace <span className="muted">/ Job search</span>
-          </span>
-          <div className="actions">
-            <span className="private-badge">● Private workspace</span>
-            <UserButton />
-          </div>
+          <NavLink to="/dashboard">Careerpath</NavLink>
+          {page && (
+            <span className="muted">
+              / <span>{page}</span>
+            </span>
+          )}
         </header>
         <main id="main">
           <Outlet />

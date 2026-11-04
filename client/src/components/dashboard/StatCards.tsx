@@ -22,15 +22,10 @@ export default function StatCards({
       Icon: BriefcaseBusiness,
     },
     {
-      label: "Response rate",
-      value: `${Math.round(data.responseRate * 100)}%`,
-      caption: "Based on current statuses",
-      Icon: MessagesSquare,
-    },
-    {
-      label: "Interview rate",
-      value: `${Math.round(data.interviewRate * 100)}%`,
-      caption: "Interview, final round or offer",
+      label: "Interviews",
+      value:
+        data.counts.Interview + data.counts["Final Round"] + data.counts.Offer,
+      caption: `${Math.round(data.interviewRate * 100)}% interview rate`,
       Icon: CalendarCheck,
     },
     {
@@ -39,6 +34,12 @@ export default function StatCards({
       value: data.counts.Offer,
       caption: "Your hard work, paying off",
       Icon: PartyPopper,
+    },
+    {
+      label: "Response rate",
+      value: `${Math.round(data.responseRate * 100)}%`,
+      caption: "Based on current statuses",
+      Icon: MessagesSquare,
     },
   ];
   return (

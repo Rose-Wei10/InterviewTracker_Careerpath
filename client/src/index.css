@@ -214,26 +214,6 @@ nav a:hover {
 .sidebar-bottom {
   margin-top: auto;
 }
-.workspace-note {
-  padding: 18px 12px;
-  font-size: 11px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 17px;
-}
-.workspace-note p {
-  color: var(--muted);
-  font-size: 11px;
-  margin-left: 14px;
-  margin-top: 4px;
-}
-.dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  background: #7d75df;
-  border-radius: 50%;
-  margin-right: 8px;
-}
 .theme-toggle {
   border: 0;
   font-size: 12px;
@@ -241,7 +221,8 @@ nav a:hover {
 }
 .workspace {
   margin-left: 238px;
-  width: calc(100% - 238px);
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -257,11 +238,6 @@ nav a:hover {
   padding: 0 42px;
   font-size: 11px;
   background: var(--surface);
-}
-.private-badge {
-  font-size: 11px;
-  color: var(--muted);
-  margin-right: 14px;
 }
 .actions {
   display: flex;
@@ -933,7 +909,6 @@ footer {
   }
   .workspace {
     margin-left: 200px;
-    width: calc(100% - 200px);
   }
   main {
     padding: 30px 25px;
@@ -970,8 +945,7 @@ footer {
   .brand {
     margin: 0 0 18px;
   }
-  .sidebar > .eyebrow,
-  .workspace-note {
+  .sidebar > .eyebrow {
     display: none;
   }
   nav {
@@ -998,14 +972,10 @@ footer {
   }
   .workspace {
     margin: 0;
-    width: 100%;
   }
   .topbar {
     height: 52px;
     padding: 0 20px;
-  }
-  .private-badge {
-    display: none;
   }
   main {
     padding: 28px 18px;
@@ -1358,20 +1328,6 @@ a.stat-card:hover {
   }
 }
 
-.dashboard-activity .timeline {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 30px;
-}
-.dashboard-activity .timeline li {
-  min-width: 0;
-}
-@media (max-width: 760px) {
-  .dashboard-activity .timeline {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Shared event controls connect the calendar, overview and application detail. */
 .calendar-toolbar,
 .review-toolbar,
@@ -1686,9 +1642,12 @@ button:not(:disabled):active,
   background: var(--soft);
 }
 .navigation-toggle {
-  margin: -30px 0 24px;
-  font-size: 11px;
-  justify-content: flex-start;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: 0 3px 9px #6f5de822;
 }
 .sidebar,
 .workspace {
@@ -1834,18 +1793,12 @@ dialog .modal-actions {
   }
   .navigation-collapsed .workspace {
     margin-left: 72px;
-    width: calc(100% - 72px);
   }
   .navigation-collapsed .navigation-label,
-  .navigation-collapsed .sidebar > .eyebrow,
-  .navigation-collapsed .workspace-note {
+  .navigation-collapsed .sidebar > .eyebrow {
     display: none;
   }
   .navigation-collapsed .brand {
-    justify-content: center;
-  }
-  .navigation-collapsed .navigation-toggle {
-    margin-top: -30px;
     justify-content: center;
   }
   .navigation-collapsed nav a,
@@ -2074,9 +2027,6 @@ textarea::placeholder {
 .skill-list .badge,
 .badge {
   border-radius: 4px;
-}
-.workspace-note .dot {
-  background: var(--accent);
 }
 .resume-card:hover {
   border-color: var(--border);
@@ -2409,4 +2359,160 @@ dialog input[type="file"] {
 }
 .brand-icon {
   color: inherit;
+}
+
+/* The breadcrumb sits directly on the workspace's pastel ground. */
+.topbar {
+  position: static;
+  justify-content: flex-start;
+  height: auto;
+  padding-top: 22px;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+  width: 100%;
+  max-width: 1420px;
+  margin-inline: auto;
+  font-size: 13px;
+}
+.topbar .muted {
+  font-size: inherit;
+}
+.topbar .muted span {
+  margin-left: 6px;
+  color: var(--text);
+}
+.topbar + main {
+  padding-top: 12px;
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+.sidebar-brand .brand {
+  margin: 0;
+}
+.sidebar-account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding-inline: 8px;
+  font-size: 13px;
+  font-weight: 650;
+}
+.sidebar-account .navigation-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dashboard-charts {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  margin-bottom: 24px;
+}
+.dashboard-charts > :last-child {
+  grid-column: 1 / -1;
+}
+.dashboard-charts .recharts-responsive-container {
+  overflow-x: clip;
+}
+.funnel-layout {
+  display: grid;
+  grid-template-columns: minmax(72px, 0.7fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+.funnel-layout .funnel {
+  gap: 7px;
+  margin: 12px 0;
+}
+.funnel-layout .funnel-row {
+  gap: 6px;
+}
+.funnel-illustration {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+}
+.funnel-illustration span {
+  height: 20px;
+  width: 100%;
+  border-radius: 4px;
+  clip-path: polygon(0 0, 100% 0, 84% 100%, 16% 100%);
+  background: linear-gradient(100deg, #edacfa, #a091fc);
+}
+.funnel-illustration span:nth-child(2) {
+  width: 78%;
+  background: linear-gradient(100deg, #d9acfa, #9b9afa);
+}
+.funnel-illustration span:nth-child(3) {
+  width: 60%;
+  background: linear-gradient(100deg, #a9b8fc, #88bcf9);
+}
+.funnel-illustration span:nth-child(4) {
+  width: 45%;
+  background: linear-gradient(100deg, #a6d8fd, #77c7f6);
+}
+.funnel-illustration span:nth-child(5) {
+  width: 28%;
+  background: linear-gradient(100deg, #a8e6fd, #64d4ec);
+}
+@media (min-width: 761px) {
+  .sidebar {
+    padding-top: 24px;
+    border-radius: 0 24px 24px 0;
+  }
+  .sidebar-bottom {
+    display: grid;
+    gap: 8px;
+  }
+  .navigation-collapsed .sidebar-brand {
+    flex-direction: column;
+  }
+  .navigation-collapsed .sidebar-brand .brand-icon {
+    margin-right: 0;
+  }
+  .navigation-collapsed .sidebar-account {
+    justify-content: center;
+    padding-inline: 0;
+  }
+  .sidebar-brand .navigation-toggle:hover::after,
+  .sidebar-brand .navigation-toggle:focus-visible::after {
+    display: block;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+  }
+}
+@media (max-width: 1050px) {
+  .dashboard-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .sidebar-brand {
+    margin-bottom: 14px;
+  }
+  .sidebar-bottom {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .sidebar-account .navigation-label {
+    display: none;
+  }
+}
+
+@media (max-width: 1150px) {
+  .sidebar-brand .brand {
+    font-size: 18px;
+  }
+}
+@media (max-width: 760px) {
+  .workspace {
+    transition: none;
+  }
 }

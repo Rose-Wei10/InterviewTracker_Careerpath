@@ -74,6 +74,110 @@ export default function Dashboard() {
         <ErrorState error={query.error} retry={() => query.refetch()} />
       ) : (
         <>
+          <div className="section-heading overview-heading">
+            <h2>Application analytics</h2>
+            <label className="inline-label">
+              Date range{" "}
+              <select value={range} onChange={(e) => setRange(e.target.value)}>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="365">Last year</option>
+                <option value="all">All time</option>
+                <option value="custom">Custom dates</option>
+              </select>
+            </label>
+          </div>
+          {range === "custom" && (
+            <div className="filters">
+              <label>
+                From
+                <input
+                  type="date"
+                  value={custom.from}
+                  onChange={(e) =>
+                    setCustom({ ...custom, from: e.target.value })
+                  }
+                />
+              </label>
+              <label>
+                To
+                <input
+                  type="date"
+                  value={custom.to}
+                  onChange={(e) => setCustom({ ...custom, to: e.target.value })}
+                />
+              </label>
+            </div>
+          )}
+
+          <StatCards data={query.data} applicationUrl={applicationUrl} />
+          <div className="chart-grid dashboard-charts">
+            <section className="card">
+              <div className="section-heading">
+                <div>
+                  <h2>Your application funnel</h2>
+                  <p className="muted">Current stage distribution</p>
+                </div>
+                <ArrowUpRight size={18} />
+              </div>
+              <div className="funnel-layout">
+                <div className="funnel-illustration" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="funnel">
+                  {statuses.map((s) => (
+                    <Link
+                      className="funnel-row"
+                      key={s}
+                      to={applicationUrl(s)}
+                      aria-label={`${s}: ${query.data.counts[s]} applications`}
+                    >
+                      <span>{s}</span>
+                      <div className="funnel-track">
+                        <div
+                          className={`funnel-bar status-${s.replace(" ", "-")}`}
+                          style={{
+                            width: `${query.data.total ? (100 * query.data.counts[s]) / query.data.total : 0}%`,
+                          }}
+                        />
+                      </div>
+                      <strong>{query.data.counts[s]}</strong>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              <p className="fine-print">
+                {query.data.rateLabel}. Rejections after interviews cannot be
+                inferred from current status alone.
+              </p>
+            </section>
+            <ActivityFeed data={query.data.recent.slice(0, 4)} />
+            <section className="card">
+              <div className="section-heading">
+                <div>
+                  <h2>Application activity</h2>
+                  <p className="muted">Small steps. Steady progress.</p>
+                </div>
+                <select
+                  aria-label="Trend period"
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value as typeof period)}
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              {query.data[period].length ? (
+                <FunnelChart data={query.data[period]} />
+              ) : (
+                <Empty>No applications in this date range.</Empty>
+              )}
+            </section>
+          </div>
           <div className="section-kicker">
             <h2>Your action center</h2>
             <p>
@@ -115,103 +219,6 @@ export default function Dashboard() {
               <EventList items={query.data.upcoming} onEdit={setEventEditing} />
             </section>
             <GhostReview count={query.data.ghostCount} />
-          </div>
-          <div className="section-heading overview-heading">
-            <h2>Application analytics</h2>
-            <label className="inline-label">
-              Date range{" "}
-              <select value={range} onChange={(e) => setRange(e.target.value)}>
-                <option value="30">Last 30 days</option>
-                <option value="90">Last 90 days</option>
-                <option value="365">Last year</option>
-                <option value="all">All time</option>
-                <option value="custom">Custom dates</option>
-              </select>
-            </label>
-          </div>
-          {range === "custom" && (
-            <div className="filters">
-              <label>
-                From
-                <input
-                  type="date"
-                  value={custom.from}
-                  onChange={(e) =>
-                    setCustom({ ...custom, from: e.target.value })
-                  }
-                />
-              </label>
-              <label>
-                To
-                <input
-                  type="date"
-                  value={custom.to}
-                  onChange={(e) => setCustom({ ...custom, to: e.target.value })}
-                />
-              </label>
-            </div>
-          )}
-
-          <StatCards data={query.data} applicationUrl={applicationUrl} />
-          <div className="chart-grid">
-            <section className="card">
-              <div className="section-heading">
-                <div>
-                  <h2>Application activity</h2>
-                  <p className="muted">Small steps. Steady progress.</p>
-                </div>
-                <select
-                  aria-label="Trend period"
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value as typeof period)}
-                >
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </div>
-              {query.data[period].length ? (
-                <FunnelChart data={query.data[period]} />
-              ) : (
-                <Empty>No applications in this date range.</Empty>
-              )}
-            </section>
-            <section className="card">
-              <div className="section-heading">
-                <div>
-                  <h2>Your application funnel</h2>
-                  <p className="muted">Current stage distribution</p>
-                </div>
-                <ArrowUpRight size={18} />
-              </div>
-              <div className="funnel">
-                {statuses.map((s) => (
-                  <Link
-                    className="funnel-row"
-                    key={s}
-                    to={applicationUrl(s)}
-                    aria-label={`${s}: ${query.data.counts[s]} applications`}
-                  >
-                    <span>{s}</span>
-                    <div className="funnel-track">
-                      <div
-                        className={`funnel-bar status-${s.replace(" ", "-")}`}
-                        style={{
-                          width: `${query.data.total ? (100 * query.data.counts[s]) / query.data.total : 0}%`,
-                        }}
-                      />
-                    </div>
-                    <strong>{query.data.counts[s]}</strong>
-                  </Link>
-                ))}
-              </div>
-              <p className="fine-print">
-                {query.data.rateLabel}. Rejections after interviews cannot be
-                inferred from current status alone.
-              </p>
-            </section>
-          </div>
-          <div className="dashboard-activity">
-            <ActivityFeed data={query.data.recent.slice(0, 4)} />
           </div>
         </>
       )}
