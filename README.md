@@ -1,28 +1,27 @@
 # Interview Tracker · Careerpath
 
-A full-stack job-search workspace for organizing applications, preparing for interviews, and understanding recruiting progress. Built with React, TypeScript, Express, PostgreSQL, Prisma, Clerk and AWS integrations.
+A full-stack job-search workspace for organizing applications, preparing for interviews, and understanding recruiting progress. Built with React, TypeScript, Express, PostgreSQL, Prisma, Clerk and private Vercel Blob storage.
 
-The upgrade preserves the existing application's data model and resume object keys. It adds validated, user-scoped APIs, a responsive dashboard, structured activity history, shared calendar events, dashboard reminders, and evidence-linked resume matching.
+## Screenshots
+
+The current workspace shown with synthetic browser-test data.
+
+![Careerpath desktop Overview in light mode with pastel backgrounds, an application funnel, and the account button at the bottom of the sidebar](docs/screenshots/dashboard-desktop.png)
+
+![Careerpath mobile Overview in dark mode](docs/screenshots/dashboard-mobile.png)
 
 ## Features
 
-- **Workspace:** indigo/lavender light theme, navy dark theme, frosted navigation, readable content cards, responsive application cards and accessible dialogs.
-- **Dashboard:** date filters, totals for all seven statuses, weekly/monthly trends, current-stage distribution, explicitly labeled status-based response/interview rate proxies, upcoming events, needs-attention reminders, linked recent activity and a manual 30-day Applied review. Totals/offers/stages open filtered applications while preserving the analytics date range. Statistics come from the signed-in user's database records.
+- **Workspace:** soft pink, lavender and blue gradients in light mode, with a dark theme and responsive layouts. On desktop, the collapse button sits beside the Careerpath logo, the account button sits at the bottom of the sidebar, and a transparent Careerpath breadcrumb replaces the top banner. Navigation and Match history can collapse independently.
+- **Overview:** total applications, interviews, offers and response rate appear first. The application funnel sits beside recent activity on desktop, with weekly/monthly trends and the action center below. The interview count and rate use current application stages. Totals, offers and funnel stages open filtered applications while preserving the analytics date range. Reminders and manual 30-day review stay independent of that range.
 - **Applications:** create, edit, detail and delete; company/role search; location/status/date filters; sorting; 10 rows per page; notes, salary, HTTP(S) job links, resume selection and event scheduling; quick status updates, removable filter chips and reset filters. Search remains synchronized with browser history.
 - **CSV:** transactional imports of up to 500 rows and filtered exports of up to 10,000 rows; invalid batches fail without partial imports; formula-leading export cells are escaped.
-- **Resume library:** named PDFs, 4 MB upload limit, private S3/Blob storage, one-minute downloads and ownership checks. Each resume opens a job-specific review with an extracted-text preview. Legacy object keys remain unchanged.
+- **Resume library:** named PDFs, 4 MB upload limit, private S3/Blob storage, one-minute downloads and ownership checks. Each resume opens a job-specific review with an optional extracted-text preview. Legacy object keys remain unchanged.
 - **Resume match:** free rule-based reviews from an uploaded PDF or pasted text; editable keyword/manual checklists, common aliases, exact evidence excerpts, conditional bullet-editing prompts and printable saved reports. Optionally link to an application and reuse its job description. No AI-provider calls, fabricated achievements, ATS scores or hiring predictions. See [review workflow](docs/RESUME_REVIEW.md).
 - **Calendar:** OA, Interview and Other events, with optional application links; timed events in the viewer's local zone and all-day deadlines that keep their saved date; editing, rescheduling, completion and cancellation through one shared form.
 - **Dashboard reminders:** one day, one hour, 15 minutes or None. Upcoming events cover seven days; Needs attention includes due reminders and overdue unfinished events regardless of analytics dates. No delivery service or worker is needed; open the app to see reminders.
 - **30-day review:** select eligible Applied applications manually, ten per page. The server rechecks ownership, age and current status before marking selected records Ghosted and recording activity.
 - **UI:** reusable dialogs, native focus handling, labeled inputs, responsive navigation, light/dark mode, toast feedback, skeletons, actionable empty/error states and delete confirmation.
-
-## Screenshots
-
-Screenshots below show the previous release. Current review screenshots are generated under `test-results/preview` from isolated browser-test records.
-
-![Desktop overview](docs/screenshots/dashboard-desktop.png)
-![Mobile overview](docs/screenshots/dashboard-mobile.png)
 
 ## Storage cutover
 
@@ -37,7 +36,8 @@ flowchart LR
   Browser[React SPA] -->|Fresh Clerk bearer token| API[Express REST API]
   Browser --> Clerk[Clerk authentication]
   API -->|Verified identity + owner filters| DB[(PostgreSQL / Prisma)]
-  API -->|Private PDF objects| S3[AWS S3]
+  API -->|Private PDF objects| Blob[Vercel Blob]
+  API -->|Legacy PDF reads| S3[AWS S3]
   API --> Extract[Bounded PDF parsing worker]
   Extract --> Match[Free evidence and bullet checks]
 ```
