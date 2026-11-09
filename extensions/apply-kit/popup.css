@@ -1,0 +1,55 @@
+:root {
+  color-scheme: light dark;
+  font:
+    14px system-ui,
+    sans-serif;
+}
+body {
+  width: 360px;
+  margin: 0;
+  padding: 16px;
+}
+h1 {
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+label,
+textarea,
+select {
+  display: block;
+}
+textarea,
+select {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 6px 0;
+}
+textarea {
+  resize: vertical;
+}
+button,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  padding: 6px 10px;
+}
+fieldset {
+  min-width: 0;
+  margin: 0 0 10px;
+  border: 1px solid #8981aa;
+  border-radius: 8px;
+}
+legend,
+.answer {
+  overflow-wrap: anywhere;
+}
+.answer {
+  white-space: pre-wrap;
+  max-height: 140px;
+  overflow: auto;
+}
+#status {
+  min-height: 1.2em;
+}

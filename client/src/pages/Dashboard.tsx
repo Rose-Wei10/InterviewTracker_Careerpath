@@ -41,6 +41,10 @@ export default function Dashboard() {
     if (status) params.set("status", status);
     return `/applications?${params}`;
   }
+  const emailUpdates = useQuery({
+    queryKey: ["email-update-count", api.userId],
+    queryFn: () => api.get<{ pending: number }>("/email-updates/count"),
+  });
   const query = useQuery({
     queryKey: ["dashboard", api.userId, from, to],
     refetchInterval: 60000,
@@ -60,6 +64,10 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="actions">
+          <Link className="button" to="/email-updates">
+            Email updates
+            {emailUpdates.data ? ` (${emailUpdates.data.pending})` : ""}
+          </Link>
           <button onClick={() => setEventEditing(null)}>
             <Plus size={17} /> Add event
           </button>

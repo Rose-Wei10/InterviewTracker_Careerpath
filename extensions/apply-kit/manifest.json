@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Careerpath Apply Kit",
+  "version": "1.0.0",
+  "description": "Preview and fill selected application answers locally.",
+  "permissions": ["activeTab", "scripting"],
+  "action": { "default_popup": "popup.html" }
+}

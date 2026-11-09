@@ -161,6 +161,18 @@ try {
   console.log(
     "Free review migration preserves legacy reports and backfills completed/failed states; retries are safe.",
   );
+  await preserve.query(
+    await readFile(
+      "server/prisma/migrations/20261106000000_gmail_review/migration.sql",
+      "utf8",
+    ),
+  );
+  await preserve.query(
+    await readFile(
+      "server/prisma/migrations/20261108000000_apply_kit/migration.sql",
+      "utf8",
+    ),
+  );
   await run("./node_modules/.bin/prisma", [
     "migrate",
     "diff",

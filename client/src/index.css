@@ -2516,3 +2516,53 @@ dialog input[type="file"] {
     transition: none;
   }
 }
+
+.apply-kit {
+  display: grid;
+  gap: 16px;
+}
+.apply-kit .page-heading {
+  margin-bottom: 0;
+}
+.apply-kit summary {
+  cursor: pointer;
+}
+.apply-kit-group {
+  margin-top: 18px;
+}
+.apply-kit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.apply-kit-row .badge {
+  margin-left: 8px;
+}
+.apply-kit-answer {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  user-select: text;
+}
+.apply-kit-notice {
+  min-height: 1.4em;
+  color: var(--accent);
+}
+.apply-kit form {
+  display: grid;
+  gap: 12px;
+}
+@media (max-width: 760px) {
+  .apply-kit-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .apply-kit-row > button {
+    justify-self: start;
+  }
+  .sidebar nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

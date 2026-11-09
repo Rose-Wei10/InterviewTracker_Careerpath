@@ -4,6 +4,7 @@ import {
   BriefcaseBusiness,
   LayoutDashboard,
   Files,
+  ClipboardList,
   CalendarDays,
   Sparkles,
   Sun,
@@ -14,7 +15,9 @@ import {
 import { useState } from "react";
 const workspacePages: Record<string, string> = {
   dashboard: "Overview",
+  "email-updates": "Email updates",
   applications: "Applications",
+  "apply-kit": "Apply Kit",
   calendar: "Calendar",
   resumes: "Resumes",
   analysis: "Match",
@@ -97,6 +100,15 @@ export default function Layout() {
           >
             <BriefcaseBusiness size={18} />{" "}
             <span className="navigation-label">Applications</span>
+          </NavLink>
+          <NavLink
+            to="/apply-kit"
+            aria-label="Apply Kit"
+            className="icon-tip"
+            data-tooltip="Apply Kit"
+          >
+            <ClipboardList size={18} />
+            <span className="navigation-label">Apply Kit</span>
           </NavLink>
           <NavLink
             to="/calendar"

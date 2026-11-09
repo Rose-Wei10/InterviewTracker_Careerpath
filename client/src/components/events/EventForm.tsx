@@ -17,11 +17,13 @@ export default function EventForm({
   event,
   application,
   date,
+  category,
   onClose,
 }: {
   event?: CalendarEvent;
   application?: Pick<Application, "id" | "company" | "role">;
   date?: string;
+  category?: EventCategory;
   onClose: () => void;
 }) {
   const api = useApi(),
@@ -32,6 +34,7 @@ export default function EventForm({
     title: event?.title ?? "",
     category:
       event?.category ??
+      category ??
       ((application ? "Interview" : "Other") as EventCategory),
     applicationId: event?.applicationId ?? application?.id ?? "",
     date: event
