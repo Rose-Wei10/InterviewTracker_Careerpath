@@ -151,3 +151,15 @@ input[type="search"] {
 #scan {
   margin-top: 5px;
 }
+
+#diagnostics {
+  overflow-wrap: anywhere;
+}
+#checklist label,
+#track label {
+  display: block;
+  margin: 6px 0;
+}
+#job-link {
+  width: 100%;
+}

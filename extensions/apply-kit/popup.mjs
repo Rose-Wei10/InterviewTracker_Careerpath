@@ -49,6 +49,7 @@ function render(field, entries, groups) {
   const fullText = document.createElement("p");
   fullText.className = "answer";
   fullAnswer.append(fullLabel, fullText);
+  const source = document.createElement("p");
   const actions = document.createElement("div");
   actions.className = "row-actions";
   const approval = document.createElement("input");
@@ -118,6 +119,9 @@ function render(field, entries, groups) {
     fullAnswer.hidden = !(entry?.answer.length > 140);
     fullAnswer.open = false;
     fullText.textContent = entry?.answer ?? "";
+    source.textContent = entry
+      ? `From Apply Kit: ${entry.prompt}`
+      : "No saved answer selected.";
     approval.checked = false;
     approval.disabled = !entry;
     const needsConfirmation = entry && (review || needsReview(field, entry));
@@ -134,7 +138,7 @@ function render(field, entries, groups) {
     updateCount();
   }
   actions.append(field.manual ? copy : approveLabel);
-  row.append(answer, fullAnswer, actions, browser);
+  row.append(answer, source, fullAnswer, actions, browser);
   update();
   if (!field.manual)
     rows.push({
@@ -146,8 +150,10 @@ function render(field, entries, groups) {
     });
 }
 
-function load(entries) {
-  session = { entries };
+function load(entries, origin) {
+  session = { entries, origin };
+  byId("diagnostics").textContent =
+    `Autofill data loaded: ${entries.length} answers. No tab scanned yet.`;
   bundle.value = "";
   byId("import").hidden = true;
   byId("loaded").hidden = false;
@@ -161,15 +167,18 @@ byId("replace").addEventListener("click", () => {
   byId("loaded").hidden = true;
   byId("import").hidden = false;
   status.textContent = "";
+  byId("diagnostics").textContent = "Autofill data not loaded. No tab scanned.";
+  byId("checklist").hidden = true;
+  byId("track").hidden = true;
   bundle.focus();
 });
 bundle.addEventListener("input", () => {
   if (!bundle.value.trim()) return;
   try {
-    const entries = parseBundle(bundle.value);
+    const { entries, origin } = parseBundle(bundle.value);
     if (!entries.length)
       throw new Error("Save at least one answer in Apply Kit.");
-    load(entries);
+    load(entries, origin);
     status.textContent = "Ready to scan this page.";
     scan.focus();
   } catch {
@@ -181,8 +190,12 @@ scan.addEventListener("click", async () => {
   clearResults();
   if (!session) {
     status.textContent = "Paste saved answers from Careerpath first.";
+    byId("diagnostics").textContent =
+      "Autofill data not loaded. Scan did not run.";
     return;
   }
+  byId("checklist").hidden = true;
+  byId("track").hidden = true;
   scan.disabled = true;
   byId("replace").disabled = true;
   try {
@@ -192,6 +205,10 @@ scan.addEventListener("click", async () => {
     });
     if (!tab?.id || !/^https?:/.test(tab.url ?? ""))
       throw new Error("Open an application page and try again.");
+    const scannedUrl = new URL(tab.url);
+    const tabLabel = `${tab.title || scannedUrl.hostname} (${scannedUrl.hostname}${scannedUrl.pathname})`;
+    byId("diagnostics").textContent =
+      `Autofill data loaded: ${session.entries.length} answers. Tab: ${tabLabel}. Scan in progress.`;
     const [result] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: applicationFields,
@@ -202,7 +219,67 @@ scan.addEventListener("click", async () => {
       documentId: result.documentId,
       url: tab.url,
     });
-    const { fields: matches, filled, embedded, greenhouse } = result.result;
+    const {
+      fields: matches,
+      filled,
+      embedded,
+      greenhouse,
+      checklist = [],
+    } = result.result;
+    const matched = matches.filter(
+      (field) =>
+        field.manual !== "demographic" &&
+        suggestions(field, session.entries).choices.length,
+    );
+    byId("diagnostics").textContent = [
+      `Autofill data loaded: ${session.entries.length} answers.`,
+      `Tab: ${tabLabel}.`,
+      greenhouse
+        ? "Greenhouse iframe detected. Only the outer page was scanned."
+        : embedded
+          ? "Iframe detected. Only the outer page was scanned."
+          : "No visible iframe detected.",
+      `${matches.length + filled} fields detected (${filled} already filled). ${matched.length} matched: ${matched.map(({ label }) => label).join(", ") || "none"}.`,
+    ].join(" ");
+    const pending = [
+      ...new Set([...checklist, ...matches.map(({ label }) => label)]),
+    ];
+    const list = byId("checklist");
+    list.replaceChildren();
+    list.hidden = !pending.length;
+    const heading = document.createElement("h2");
+    heading.textContent = "Unfinished fields";
+    list.append(heading);
+    for (const label of pending) {
+      const line = document.createElement("label");
+      const check = document.createElement("input");
+      check.type = "checkbox";
+      line.append(
+        check,
+        ` ${needsReview({ label }, { prompt: "" }) ? "Review: " : ""}${label}`,
+      );
+      list.append(line);
+    }
+    if (!greenhouse && /(?:^|\.)greenhouse\.io$/.test(scannedUrl.hostname)) {
+      const key = `${scannedUrl.origin}${scannedUrl.pathname}${scannedUrl.search}`;
+      byId("job-link").value =
+        localStorage.getItem("greenhouseTarget") === key
+          ? localStorage.getItem("originalJobLink") || ""
+          : "";
+    } else {
+      const tabKey = `${tab.id}:${scannedUrl.origin}`;
+      if (matches.length || checklist.length || greenhouse) {
+        localStorage.setItem("lastApplicationTab", tabKey);
+        localStorage.setItem("lastApplicationLink", scannedUrl.href);
+      }
+      byId("job-link").value =
+        localStorage.getItem("lastApplicationTab") === tabKey
+          ? localStorage.getItem("lastApplicationLink") || scannedUrl.href
+          : scannedUrl.href;
+    }
+    byId("confirmed").checked = false;
+    byId("record").disabled = true;
+    byId("track").hidden = false;
     const groups = [
       "Ready to fill",
       "Needs review",
@@ -222,6 +299,10 @@ scan.addEventListener("click", async () => {
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.textContent = "Open Greenhouse application";
+      link.addEventListener("click", () => {
+        localStorage.setItem("greenhouseTarget", greenhouse.split("#")[0]);
+        localStorage.setItem("originalJobLink", scannedUrl.href);
+      });
       fields.append(link);
     }
     status.textContent = greenhouse
@@ -236,6 +317,7 @@ scan.addEventListener("click", async () => {
   } catch (error) {
     status.textContent =
       error instanceof Error ? error.message : "Unable to scan this page.";
+    byId("diagnostics").textContent += " Scan did not complete.";
   } finally {
     scan.disabled = false;
     byId("replace").disabled = false;
@@ -266,9 +348,9 @@ fill.addEventListener("click", async () => {
     const [result] = await chrome.scripting.executeScript({
       target: { tabId: current.tabId, documentIds: [current.documentId] },
       func: applicationFields,
-      args: [approved],
+      args: [approved, true],
     });
-    status.textContent = `Filled ${result.result} of ${approved.length} selected fields. Review the form before submitting.`;
+    status.textContent = `Verified ${result.result} of ${approved.length} selected values after filling. Re-scan to check unfinished fields.`;
   } catch {
     status.textContent =
       "The page changed or could not be filled. Scan it again.";
@@ -277,5 +359,25 @@ fill.addEventListener("click", async () => {
     byId("replace").disabled = false;
     clearResults();
     scan.focus();
+  }
+});
+
+byId("confirmed").addEventListener("change", () => {
+  byId("record").disabled = !byId("confirmed").checked;
+});
+byId("record").addEventListener("click", () => {
+  try {
+    const job = new URL(byId("job-link").value);
+    if (
+      !["http:", "https:"].includes(job.protocol) ||
+      job.username ||
+      job.password
+    )
+      throw new Error();
+    const destination = new URL("/applications", session.origin);
+    destination.searchParams.set("recordLink", job.href);
+    chrome.tabs.create({ url: destination.href });
+  } catch {
+    status.textContent = "Enter the original HTTP or HTTPS job link first.";
   }
 });

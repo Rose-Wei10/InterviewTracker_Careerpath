@@ -26,7 +26,10 @@ test("parses a versioned bundle and matches aliases and rephrased questions", ()
     parseBundle(
       JSON.stringify({ format: "careerpath-apply-kit", version: 1, entries }),
     ),
-  ).toEqual(entries);
+  ).toEqual({
+    entries,
+    origin: "https://interview-tracker-careerpath.vercel.app",
+  });
   expect(() => parseBundle('{"version":2}')).toThrow();
   expect(suggestions({ label: "Given name" }, entries).suggested).toBe(0);
   expect(
@@ -141,8 +144,10 @@ test("reports Greenhouse embeds and never writes custom controls", () => {
 test("popup hides imported data, groups fields, and sends only checked answers", async () => {
   const { window } = new JSDOM(
     readFileSync(new URL("./popup.html", import.meta.url), "utf8"),
+    { url: "https://extension.example.test/" },
   );
   vi.stubGlobal("document", window.document);
+  vi.stubGlobal("localStorage", window.localStorage);
   const executeScript = vi
     .fn()
     .mockResolvedValueOnce([
@@ -187,15 +192,57 @@ test("popup hides imported data, groups fields, and sends only checked answers",
     expect(find("fields").textContent).toContain("Complete on the form"),
   );
   expect(find("status").textContent).toContain("2 already filled");
+  expect(find("diagnostics").textContent).toContain("1 matched: Given name");
+  expect(find("fields").textContent).toContain(
+    "From Apply Kit: Legal first name",
+  );
+  expect(find("checklist").textContent).toContain("Location");
+  expect(find("record").disabled).toBe(true);
   expect(find("fill").disabled).toBe(true);
   window.document.querySelector('input[type="checkbox"]').click();
   expect(find("count").textContent).toBe("1 selected");
   find("fill").click();
   await vi.waitFor(() =>
-    expect(find("status").textContent).toContain("Filled 1 of 1"),
+    expect(find("status").textContent).toContain("Verified 1 of 1"),
   );
   expect(executeScript.mock.calls[1][0].args).toEqual([
     [{ index: 0, signature: "name", value: "Alex" }],
+    true,
   ]);
+  window.close();
+});
+
+test("PayPal-style form flags review prompts and verifies the page kept the value", async () => {
+  const { window } =
+    new JSDOM(`<label>Are you eligible for employment?<textarea required></textarea></label>
+    <input hidden type="file"><button aria-label="Select file - Upload resume">Select file</button>
+    <label>Country<input role="combobox" value="Typed, not selected"></label>`);
+  window.HTMLElement.prototype.getClientRects = () => [{ width: 20 }];
+  for (const name of [
+    "document",
+    "getComputedStyle",
+    "HTMLTextAreaElement",
+    "Event",
+  ])
+    vi.stubGlobal(name, window[name]);
+  const scan = applicationFields(null, true);
+  expect(scan.checklist).toContain("Upload résumé or requested attachment");
+  expect(scan.checklist).toContain("Verify selection: Country");
+  for (const label of [
+    "Are you eligible?",
+    "Do you consent?",
+    "Any conflict of interest?",
+  ])
+    expect(needsReview({ label }, entries[0])).toBe(true);
+  window.document
+    .querySelector("textarea")
+    .addEventListener("change", (event) => {
+      setTimeout(() => {
+        event.target.value = "";
+      }, 10);
+    });
+  expect(
+    await applicationFields([{ ...scan.fields[0], value: "Example" }], true),
+  ).toBe(0);
   window.close();
 });

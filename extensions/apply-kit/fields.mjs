@@ -69,7 +69,11 @@ export function applicationFields(approved = null, report = false) {
         [label, referenced, labels, aria, legend, el.name, el.id].join(" "),
       );
     const manual = demographic ? "demographic" : widget ? "choice" : null;
-    const display = label || (widget ? "Choose an option on the form" : "");
+    const phone =
+      !widget && /(?:^|[_-])phone(?:[_-]number)?$/i.test(el.id || el.name);
+    const display =
+      label ||
+      (widget ? "Choose an option on the form" : phone ? "Phone number" : "");
     const semantic =
       autocomplete.toLowerCase().trim().split(/\s+/).at(-1) || "";
     const signature = JSON.stringify([
@@ -118,8 +122,13 @@ export function applicationFields(approved = null, report = false) {
       .map((el, index) => describe(el, index, report))
       .filter(Boolean);
     if (!report) return fields;
-    const greenhouse = [...document.querySelectorAll("iframe")]
-      .filter(visible)
+    const frames = [...document.querySelectorAll("iframe[src]")].filter(
+      (frame) =>
+        frame.getAttribute("src")?.trim() &&
+        /^https?:/.test(frame.src) &&
+        visible(frame),
+    );
+    const greenhouse = frames
       .map((frame) => {
         try {
           const url = new URL(frame.src);
@@ -139,16 +148,55 @@ export function applicationFields(approved = null, report = false) {
         return null;
       })
       .find(Boolean);
+    const checklist = [
+      ...document.querySelectorAll(
+        'input[type="file"], select, input[required], textarea[required], [role="combobox"]',
+      ),
+    ]
+      .filter(
+        (el) =>
+          visible(el) &&
+          !el.matches(":disabled") &&
+          (el.matches('[role="combobox"]') ||
+            (el.matches('input[type="checkbox"], input[type="radio"]')
+              ? !el.checked
+              : !el.value)) &&
+          !el.files?.length,
+      )
+      .map((el) =>
+        el.type === "file"
+          ? "Upload résumé or requested attachment"
+          : el.matches('[role="combobox"]')
+            ? `Verify selection: ${describe(el, controls.indexOf(el), true)?.label || el.getAttribute("aria-label") || "dropdown or autocomplete"}`
+            : describe(el, controls.indexOf(el))?.label ||
+              el.labels?.[0]?.textContent?.trim() ||
+              el.getAttribute("aria-label") ||
+              "Complete a required field on the form",
+      )
+      .slice(0, 60);
+    // Some employers expose the upload button while hiding its native file input.
+    if (
+      [...document.querySelectorAll("button, [role=button]")].some(
+        (el) =>
+          visible(el) &&
+          !el.matches(":disabled, [aria-disabled=true]") &&
+          /^(?:select file\s*[-–]\s*)?(?:upload|attach)(?: your)? (?:résumé|resume|cv)\b/i.test(
+            (el.getAttribute("aria-label") || el.textContent).trim(),
+          ),
+      )
+    )
+      checklist.push("Upload résumé or requested attachment");
     return {
+      checklist,
       fields: fields.filter((field) => !field.filled),
       filled: fields.filter((field) => field.filled).length,
-      embedded: [...document.querySelectorAll("iframe")].some(visible),
+      embedded: frames.length > 0,
       greenhouse,
     };
   }
   const scanned = globalThis.careerpathScannedControls;
   delete globalThis.careerpathScannedControls;
-  let filled = 0;
+  const attempted = [];
   for (const { index, signature, value } of approved) {
     const el = controls[index];
     const current = el && describe(el, index);
@@ -170,7 +218,17 @@ export function applicationFields(approved = null, report = false) {
     setter.call(el, value);
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
-    if (el.value === value) filled++;
+    attempted.push({ el, value });
   }
-  return filled;
+  const retained = () =>
+    attempted.filter(
+      ({ el, value }) =>
+        el.isConnected &&
+        el.value === value &&
+        el.validity.valid &&
+        el.getAttribute("aria-invalid") !== "true",
+    ).length;
+  return report
+    ? new Promise((resolve) => setTimeout(() => resolve(retained()), 350))
+    : retained();
 }

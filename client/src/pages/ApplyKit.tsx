@@ -138,6 +138,7 @@ export default function ApplyKit() {
         JSON.stringify({
           format: "careerpath-apply-kit",
           version: 1,
+          careerpathOrigin: window.location.origin,
           entries: entries.map(({ starterKey, prompt, answer }) => ({
             starterKey,
             prompt,

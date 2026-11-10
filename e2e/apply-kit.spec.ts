@@ -29,6 +29,7 @@ test("Apply Kit saves, searches, copies and removes reusable answers", async ({
   ).toEqual({
     format: "careerpath-apply-kit",
     version: 1,
+    careerpathOrigin: new URL(page.url()).origin,
     entries: [
       {
         starterKey: "first-name",
@@ -147,4 +148,35 @@ test("Apply Kit saves, searches, copies and removes reusable answers", async ({
   await expect(
     page.getByText("How do you teach loops?", { exact: true }),
   ).toHaveCount(0);
+});
+
+test("confirmed application handoff checks the original job link before offering a save", async ({
+  page,
+}) => {
+  const owner = `apply-kit-${randomUUID()}`;
+  await page.setExtraHTTPHeaders({ "x-browser-test-user": owner });
+  const jobLink = "https://employer.example.test/jobs/123?source=listing";
+  await page.goto(
+    `/applications?${new URLSearchParams({ recordLink: jobLink })}`,
+  );
+  await page.getByRole("button", { name: "Add confirmed application" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Job URL")).toHaveValue(jobLink);
+  await dialog.getByLabel("Company").fill("Synthetic Employer");
+  await dialog.getByLabel("Role").fill("Software Engineer");
+  await dialog.getByRole("button", { name: "Save application" }).click();
+  await expect(dialog).not.toBeVisible();
+
+  await page.goto(
+    `/applications?${new URLSearchParams({ recordLink: jobLink })}`,
+  );
+  const edit = page.getByRole("button", {
+    name: "Edit Synthetic Employer · Software Engineer",
+  });
+  await expect(edit).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Add confirmed application" }),
+  ).toHaveCount(0);
+  await edit.click();
+  await expect(dialog.getByLabel("Job URL")).toHaveValue(jobLink);
 });

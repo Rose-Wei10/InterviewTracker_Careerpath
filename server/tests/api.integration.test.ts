@@ -85,6 +85,19 @@ describe("real PostgreSQL API behavior", () => {
       }),
     ).toBe(1);
   });
+  it("looks up exact job link duplicates for the signed-in owner only", async () => {
+    const jobLink = "https://employer.example.test/jobs/123?source=listing";
+    await prisma.jobApplication.update({ where: { id }, data: { jobLink } });
+    const owned = await as("get", "/api/applications").query({ jobLink });
+    expect(owned.status).toBe(200);
+    expect(owned.body.items.map((item: { id: string }) => item.id)).toEqual([
+      id,
+    ]);
+    const other = await as("get", "/api/applications", "bob").query({
+      jobLink,
+    });
+    expect(other.body.items).toEqual([]);
+  });
   it("rejects attempts to change ownership", async () => {
     const r = await as("patch", `/api/applications/${id}`).send({
       userId: "bob",

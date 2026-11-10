@@ -9,9 +9,11 @@ import type { Application, Resume } from "../../types";
 import { Modal } from "../ui";
 export default function AddApplicationModal({
   application,
+  initialJobLink,
   onClose,
 }: {
   application?: Application | null;
+  initialJobLink?: string;
   onClose: () => void;
 }) {
   const api = useApi(),
@@ -25,7 +27,7 @@ export default function AddApplicationModal({
       new Date().toLocaleDateString("en-CA"),
     location: application?.location ?? "",
     salary: application?.salary ?? "",
-    jobLink: application?.jobLink ?? "",
+    jobLink: application?.jobLink ?? initialJobLink ?? "",
     notes: application?.notes ?? "",
     jobDescription: application?.jobDescription ?? "",
     resumeId: application?.resumeId ?? "",

@@ -46,6 +46,7 @@ export const listSchema = z
     page: z.coerce.number().int().min(1).max(100000).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(10),
     search: z.string().trim().max(200).optional(),
+    jobLink: z.string().url().max(2048).optional(),
     status: z.enum(statuses).optional(),
     location: z.string().trim().max(200).optional(),
     from: date.optional(),

@@ -23,10 +23,20 @@ export default function Applications() {
     qc = useQueryClient(),
     [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState<Application | null | undefined>(
-      params.get("new") ? null : undefined,
+      params.get("new") && !params.get("recordLink") ? null : undefined,
     ),
     [deleting, setDeleting] = useState<Application | null>(null);
   const [scheduling, setScheduling] = useState<Application | null>(null);
+  const recordLink = params.get("recordLink");
+  const duplicates = useQuery({
+    queryKey: ["applications", api.userId, "job-link", recordLink],
+    enabled: Boolean(recordLink),
+    queryFn: () =>
+      api.get<Page<Application>>("/applications", {
+        jobLink: recordLink,
+        pageSize: 10,
+      }),
+  });
   const search = params.get("search") ?? "";
   const [debounced, setDebounced] = useState(search);
   useEffect(() => {
@@ -316,12 +326,54 @@ export default function Applications() {
           onClose={() => setScheduling(null)}
         />
       )}
+      {recordLink && (
+        <section className="card" aria-label="Record confirmed application">
+          <h2>Record confirmed application</h2>
+          <p style={{ overflowWrap: "anywhere" }}>{recordLink}</p>
+          {duplicates.isPending && <Loading />}
+          {duplicates.isError && (
+            <ErrorState
+              error={duplicates.error}
+              retry={() => duplicates.refetch()}
+            />
+          )}
+          {duplicates.data &&
+            (duplicates.data.total ? (
+              <>
+                <p>
+                  Careerpath already has a record with this job link. Review or
+                  update it below.
+                </p>
+                {duplicates.data.items.map((application) => (
+                  <button
+                    key={application.id}
+                    onClick={() => setEditing(application)}
+                  >
+                    Edit {application.company} · {application.role}
+                  </button>
+                ))}
+              </>
+            ) : (
+              <>
+                <p>
+                  No exact job link match. Check Applications for records saved
+                  under another URL.
+                </p>
+                <button onClick={() => setEditing(null)}>
+                  Add confirmed application
+                </button>
+              </>
+            ))}
+        </section>
+      )}
       {editing !== undefined && (
         <AddApplicationModal
           application={editing}
+          initialJobLink={recordLink ?? undefined}
           onClose={() => {
             setEditing(undefined);
             params.delete("new");
+            params.delete("recordLink");
             setParams(params);
           }}
         />

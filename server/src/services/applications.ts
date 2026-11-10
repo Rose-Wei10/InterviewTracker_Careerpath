@@ -9,6 +9,7 @@ export function applicationWhere(
 ): Prisma.JobApplicationWhereInput {
   return {
     userId,
+    ...(q.jobLink ? { jobLink: q.jobLink } : {}),
     ...(q.search
       ? {
           OR: [

@@ -29,7 +29,24 @@
         <button id="scan" type="button">Scan this page</button>
       </section>
       <p id="status" role="status"></p>
+      <section class="card" aria-label="Scan diagnostics">
+        <strong>Scan details</strong>
+        <p id="diagnostics">Autofill data not loaded. No tab scanned.</p>
+      </section>
       <section id="fields" aria-label="Field suggestions"></section>
+      <section id="checklist" class="card" hidden></section>
+      <details id="track" class="card" hidden>
+        <summary>Record an application after submission</summary>
+        <label for="job-link">Original job link</label>
+        <input id="job-link" type="url" />
+        <label
+          ><input id="confirmed" type="checkbox" /> The employer confirmed
+          submission</label
+        >
+        <button id="record" type="button" disabled>
+          Check Careerpath for duplicates
+        </button>
+      </details>
     </main>
     <footer class="bar">
       <span id="count">0 selected</span

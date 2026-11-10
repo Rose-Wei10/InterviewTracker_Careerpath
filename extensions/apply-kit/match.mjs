@@ -60,7 +60,12 @@ export function parseBundle(text) {
   ) {
     throw new Error("Paste a valid version 1 bundle from Apply Kit.");
   }
-  return data.entries;
+  const origin =
+    typeof data.careerpathOrigin === "string" &&
+    /^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/.test(data.careerpathOrigin)
+      ? data.careerpathOrigin
+      : "https://interview-tracker-careerpath.vercel.app";
+  return { entries: data.entries, origin };
 }
 
 export function suggestions(field, entries) {
@@ -118,7 +123,7 @@ export function suggestions(field, entries) {
 export function needsReview(field, entry) {
   return (
     entry.review ||
-    /\b(salary|compensation|pay|wage|sponsor\w*|visa|work authori[sz]\w*|eligible to work|legally authori[sz]\w*|why\s+(?:do|are|would|this|our)|motivation)\b/i.test(
+    /\b(salary|compensation|pay|wage|eligib\w*|consent|agree|acknowledg\w*|certif\w*|conflict\w*|related to|relationship|sponsor\w*|visa|work authori[sz]\w*|eligible to work|legally authori[sz]\w*|why\s+(?:do|are|would|this|our)|motivation)\b/i.test(
       `${field.label} ${entry.prompt}`,
     )
   );
