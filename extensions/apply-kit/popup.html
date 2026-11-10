@@ -6,18 +6,37 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
-    <h1>Apply Kit</h1>
-    <label for="bundle">Paste autofill data from Careerpath</label>
-    <textarea
-      id="bundle"
-      rows="3"
-      autocomplete="off"
-      spellcheck="false"
-    ></textarea>
-    <button id="scan" type="button">Scan this page</button>
-    <p id="status" role="status"></p>
-    <section id="fields" aria-label="Field suggestions"></section>
-    <button id="fill" type="button" disabled>Fill selected</button>
+    <header>
+      <p class="brand">Careerpath</p>
+      <h1>Apply Kit</h1>
+      <p>Review saved answers for this application.</p>
+    </header>
+    <main>
+      <section class="card">
+        <div id="import">
+          <label for="bundle">Paste autofill data from Careerpath</label>
+          <textarea
+            id="bundle"
+            rows="3"
+            autocomplete="off"
+            spellcheck="false"
+          ></textarea>
+        </div>
+        <div id="loaded" class="bar" hidden>
+          <strong id="summary"></strong
+          ><button id="replace" type="button">Replace</button>
+        </div>
+        <button id="scan" type="button">Scan this page</button>
+      </section>
+      <p id="status" role="status"></p>
+      <section id="fields" aria-label="Field suggestions"></section>
+    </main>
+    <footer class="bar">
+      <span id="count">0 selected</span
+      ><button id="fill" class="primary" type="button" disabled>
+        Fill selected
+      </button>
+    </footer>
     <script type="module" src="popup.mjs"></script>
   </body>
 </html>

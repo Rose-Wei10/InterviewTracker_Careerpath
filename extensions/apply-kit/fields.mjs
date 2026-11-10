@@ -1,26 +1,33 @@
 // Chrome serializes this function into the active tab. Keep it self-contained.
-export function applicationFields(approved = null) {
+export function applicationFields(approved = null, report = false) {
   const types = new Set(["text", "email", "tel", "url"]);
   const sensitive =
     /\b(password|passcode|passphrase|pin|social security|ssn|passport|driver.?s licen[sc]e|tax id|national id|credit card|debit card|card number|cvv|cvc|bank|routing number|account number|security code|verification code|one time|otp|birth date|date of birth|dob)\b/i;
   const blockedAutocomplete =
     /(?:^|\s)(?:cc-\S+|current-password|new-password|one-time-code|bday(?:-\w+)?)(?:\s|$)/i;
   const controls = [...document.querySelectorAll("input, textarea")];
-  const describe = (el, index) => {
+  const visible = (el) => {
+    if (
+      !el.getClientRects().length ||
+      el.closest("[hidden], [inert], [aria-hidden=true]")
+    )
+      return false;
+    for (let parent = el; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      if (style.visibility !== "visible" || style.opacity === "0") return false;
+    }
+    return true;
+  };
+  const describe = (el, index, allowFilled = false) => {
     if (
       (!types.has(el.type) && el.tagName !== "TEXTAREA") ||
       el.matches(
         ":disabled, [readonly], [aria-disabled=true], [aria-readonly=true]",
       ) ||
-      el.closest("[hidden], [inert], [aria-hidden=true]") ||
-      el.value !== "" ||
-      !el.getClientRects().length
+      (!allowFilled && el.value !== "") ||
+      !visible(el)
     )
       return null;
-    for (let parent = el; parent; parent = parent.parentElement) {
-      const style = getComputedStyle(parent);
-      if (style.visibility !== "visible" || style.opacity === "0") return null;
-    }
     const referenced = (el.getAttribute("aria-labelledby") || "")
       .split(/\s+/)
       .map((id) => document.getElementById(id)?.textContent || "")
@@ -35,16 +42,53 @@ export function applicationFields(approved = null) {
     const legend =
       el.closest("fieldset")?.querySelector(":scope > legend")?.textContent ||
       "";
-    const label = (referenced || aria || labels || placeholder)
+    const generic =
+      /^(?:textbox|search|select|choose|enter text|text input)[.… ]*$/i;
+    const caption =
+      el.parentElement?.previousElementSibling ?? el.previousElementSibling;
+    const nearby = [el.previousElementSibling, caption].find(
+      (node) =>
+        node?.matches("label, legend, span, p, div") &&
+        !node.querySelector("input, select, textarea, button") &&
+        node.textContent.trim().length <= 120 &&
+        visible(node),
+    )?.textContent;
+    const label = (
+      [referenced, labels, aria, nearby, placeholder].find(
+        (value) => value?.trim() && !generic.test(value.trim()),
+      ) || ""
+    )
       .replace(/\s+/g, " ")
       .trim();
+    const widget =
+      el.closest(
+        '[role="combobox"], [aria-haspopup="listbox"], [aria-autocomplete], [aria-expanded][aria-controls]',
+      ) || el.hasAttribute("list");
+    const demographic =
+      /\b(pronouns?|gender|race|ethnicity|disability|veteran)\b/i.test(
+        [label, referenced, labels, aria, legend, el.name, el.id].join(" "),
+      );
+    const manual = demographic ? "demographic" : widget ? "choice" : null;
+    const display = label || (widget ? "Choose an option on the form" : "");
+    const semantic =
+      autocomplete.toLowerCase().trim().split(/\s+/).at(-1) || "";
+    const signature = JSON.stringify([
+      display,
+      el.tagName,
+      el.type,
+      el.id,
+      el.name,
+      autocomplete,
+      manual,
+    ]);
+
     const identifiers = [el.id, el.name, autocomplete]
       .join(" ")
       .replace(/([a-z])([A-Z])/g, "$1 $2")
       .replace(/[_-]/g, " ");
     if (
-      !label ||
-      label.length > 600 ||
+      (!display && !semantic) ||
+      display.length > 600 ||
       blockedAutocomplete.test(autocomplete) ||
       sensitive.test(
         [
@@ -61,30 +105,59 @@ export function applicationFields(approved = null) {
       return null;
     return {
       index,
-      label,
-      signature: JSON.stringify([
-        label,
-        el.tagName,
-        el.type,
-        el.id,
-        el.name,
-        autocomplete,
-      ]),
+      label: display || semantic,
+      signature,
+      autocomplete: semantic,
+      manual,
+      filled: el.value !== "",
     };
   };
   if (!approved) {
     globalThis.careerpathScannedControls = controls;
-    return controls.map(describe).filter(Boolean);
+    const fields = controls
+      .map((el, index) => describe(el, index, report))
+      .filter(Boolean);
+    if (!report) return fields;
+    const greenhouse = [...document.querySelectorAll("iframe")]
+      .filter(visible)
+      .map((frame) => {
+        try {
+          const url = new URL(frame.src);
+          if (
+            url.protocol === "https:" &&
+            !url.username &&
+            !url.password &&
+            !url.port &&
+            ["job-boards.greenhouse.io", "boards.greenhouse.io"].includes(
+              url.hostname,
+            )
+          )
+            return url.href;
+        } catch {
+          /* An invalid embed has no safe standalone destination. */
+        }
+        return null;
+      })
+      .find(Boolean);
+    return {
+      fields: fields.filter((field) => !field.filled),
+      filled: fields.filter((field) => field.filled).length,
+      embedded: [...document.querySelectorAll("iframe")].some(visible),
+      greenhouse,
+    };
   }
   const scanned = globalThis.careerpathScannedControls;
   delete globalThis.careerpathScannedControls;
   let filled = 0;
   for (const { index, signature, value } of approved) {
     const el = controls[index];
+    const current = el && describe(el, index);
     if (
       !el?.isConnected ||
       el !== scanned?.[index] ||
-      describe(el, index)?.signature !== signature ||
+      !current ||
+      current.manual ||
+      current.signature !== signature ||
       (el.maxLength >= 0 && value.length > el.maxLength) ||
       (el.tagName === "INPUT" && /[\r\n]/.test(value))
     )

@@ -14,8 +14,14 @@ const aliases = {
   postal: ["zip code", "postcode", "zip"],
   region: ["state", "province"],
   github: ["github url", "github profile", "github profile url"],
-  linkedin: ["linkedin url", "linkedin profile", "linkedin profile url"],
-  portfolio: ["portfolio url", "personal website"],
+  linkedin: [
+    "linkedin link",
+    "linkedin url",
+    "linkedin profile",
+    "linkedin profile url",
+  ],
+  portfolio: ["portfolio url", "personal website", "website link"],
+  city: ["location city", "current city"],
 };
 
 const stop = new Set(
@@ -60,8 +66,30 @@ export function parseBundle(text) {
 export function suggestions(field, entries) {
   const label = normalize(field.label);
   const tokens = words(field.label);
+  const semantic = {
+    "given-name": "first-name",
+    "family-name": "last-name",
+    nickname: "preferred-name",
+    email: "email",
+    tel: "phone",
+    "postal-code": "postal",
+    "address-level1": "region",
+    "address-level2": "city",
+    "country-name": "country",
+  };
+  const bareLocation = label === "location";
   const ranks = entries
     .map((entry, index) => {
+      if (bareLocation)
+        return {
+          index,
+          score: ["city", "locations"].includes(entry.starterKey) ? 0.7 : 0,
+        };
+      if (Object.hasOwn(semantic, field.autocomplete))
+        return {
+          index,
+          score: semantic[field.autocomplete] === entry.starterKey ? 1 : 0,
+        };
       const prompt = normalize(entry.prompt);
       const alias =
         Object.hasOwn(aliases, entry.starterKey) &&
@@ -79,7 +107,9 @@ export function suggestions(field, entries) {
   return {
     choices: ranks.map(({ index }) => index),
     suggested:
-      ranks.length && (!ranks[1] || ranks[0].score - ranks[1].score >= 0.15)
+      !bareLocation &&
+      ranks.length &&
+      (!ranks[1] || ranks[0].score - ranks[1].score >= 0.15)
         ? ranks[0].index
         : null,
   };
