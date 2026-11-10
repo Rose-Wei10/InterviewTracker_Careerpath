@@ -68,8 +68,27 @@ export function parseBundle(text) {
   return { entries: data.entries, origin };
 }
 
+export function isDialingCode(field) {
+  return (
+    field.autocomplete === "tel-country-code" ||
+    /^(?:phone )?(?:country|dialing|dialling) code$/.test(
+      normalize(field.label),
+    )
+  );
+}
+
 export function suggestions(field, entries) {
   const label = normalize(field.label);
+  if (isDialingCode(field)) {
+    const choices = entries.flatMap((entry, index) =>
+      entry.starterKey === "phone-country-code" &&
+      /^\+[1-9]\d{0,2}$/.test(entry.answer?.trim())
+        ? [index]
+        : [],
+    );
+    return { choices, suggested: choices.length === 1 ? choices[0] : null };
+  }
+  if (label === "select date") return { choices: [], suggested: null };
   const tokens = words(field.label);
   const semantic = {
     "given-name": "first-name",
@@ -123,7 +142,7 @@ export function suggestions(field, entries) {
 export function needsReview(field, entry) {
   return (
     entry.review ||
-    /\b(salary|compensation|pay|wage|eligib\w*|consent|agree|acknowledg\w*|certif\w*|conflict\w*|related to|relationship|sponsor\w*|visa|work authori[sz]\w*|eligible to work|legally authori[sz]\w*|why\s+(?:do|are|would|this|our)|motivation)\b/i.test(
+    /\b(salary|compensation|pay|wage|eligib\w*|consent|agree|acknowledg\w*|certif\w*|conflict\w*|government official|previous employee|referral|business interest|competes?|related to|relationship|sponsor\w*|visa|work authori[sz]\w*|eligible to work|legally authori[sz]\w*|why\s+(?:do|are|would|this|our)|motivation)\b/i.test(
       `${field.label} ${entry.prompt}`,
     )
   );

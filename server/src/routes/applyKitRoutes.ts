@@ -20,6 +20,7 @@ const groups = [
       ["preferred-name", "Preferred name"],
       ["email", "Email"],
       ["phone", "Phone"],
+      ["phone-country-code", "Phone country code"],
       ["city", "City"],
       ["region", "State or region"],
       ["postal", "Postal code"],

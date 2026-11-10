@@ -198,9 +198,12 @@ test("popup hides imported data, groups fields, and sends only checked answers",
   );
   expect(find("checklist").textContent).toContain("Location");
   expect(find("record").disabled).toBe(true);
+  find("checklist").querySelector("input").click();
+  expect(find("manual-count").textContent).toBe("1 manual items checked");
+  expect(find("count").textContent).toBe("0 selected for autofill");
   expect(find("fill").disabled).toBe(true);
   window.document.querySelector('input[type="checkbox"]').click();
-  expect(find("count").textContent).toBe("1 selected");
+  expect(find("count").textContent).toBe("1 selected for autofill");
   find("fill").click();
   await vi.waitFor(() =>
     expect(find("status").textContent).toContain("Verified 1 of 1"),
@@ -245,4 +248,28 @@ test("PayPal-style form flags review prompts and verifies the page kept the valu
     await applicationFields([{ ...scan.fields[0], value: "Example" }], true),
   ).toBe(0);
   window.close();
+});
+
+test("dialing code matches only a valid saved phone country code", () => {
+  const data = [
+    { starterKey: "postal", prompt: "Postal code", answer: "98101" },
+    { starterKey: "country", prompt: "Country", answer: "United States" },
+    {
+      starterKey: "phone-country-code",
+      prompt: "Phone country code",
+      answer: "98101",
+    },
+  ];
+  expect(
+    suggestions({ label: "Country code", autocomplete: "postal-code" }, data)
+      .choices,
+  ).toEqual([]);
+  data[2].answer = "+1";
+  expect(suggestions({ label: "Country code" }, data).suggested).toBe(2);
+  expect(suggestions({ label: "Dialing code" }, data).suggested).toBe(2);
+  expect(
+    suggestions({ label: "Code", autocomplete: "tel-country-code" }, data)
+      .suggested,
+  ).toBe(2);
+  expect(suggestions({ label: "Country" }, data).suggested).toBe(1);
 });

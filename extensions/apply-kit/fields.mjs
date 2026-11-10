@@ -68,7 +68,11 @@ export function applicationFields(approved = null, report = false) {
       /\b(pronouns?|gender|race|ethnicity|disability|veteran)\b/i.test(
         [label, referenced, labels, aria, legend, el.name, el.id].join(" "),
       );
-    const manual = demographic ? "demographic" : widget ? "choice" : null;
+    const manual = demographic
+      ? "demographic"
+      : widget || /^select date[ *]*$/i.test(label)
+        ? "choice"
+        : null;
     const phone =
       !widget && /(?:^|[_-])phone(?:[_-]number)?$/i.test(el.id || el.name);
     const display =

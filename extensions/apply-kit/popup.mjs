@@ -1,5 +1,10 @@
 import { applicationFields } from "./fields.mjs";
-import { needsReview, parseBundle, suggestions } from "./match.mjs";
+import {
+  isDialingCode,
+  needsReview,
+  parseBundle,
+  suggestions,
+} from "./match.mjs";
 
 const byId = (id) => document.getElementById(id);
 const bundle = byId("bundle"),
@@ -12,7 +17,10 @@ let rows = [];
 
 function updateCount() {
   const count = rows.filter(({ approval }) => approval.checked).length;
-  byId("count").textContent = `${count} selected`;
+  byId("count").textContent = `${count} selected for autofill`;
+  byId("available").textContent = `${rows.length} fields available to autofill`;
+  byId("manual-count").textContent =
+    `${byId("checklist").querySelectorAll("input:checked").length} manual items checked`;
   fill.disabled = !count;
 }
 
@@ -33,6 +41,13 @@ function render(field, entries, groups) {
   title.textContent = field.label;
   row.append(title);
   group.append(row);
+  const dialingCode = isDialingCode(field);
+  if (dialingCode && !choices.length) {
+    const instruction = document.createElement("p");
+    instruction.textContent = "Choose the dialing code on the form.";
+    row.append(instruction);
+    return;
+  }
   if (field.manual === "demographic") {
     const message = document.createElement("p");
     message.textContent = "Choose your response on the application form.";
@@ -80,7 +95,9 @@ function render(field, entries, groups) {
   search.setAttribute("aria-label", `Find an answer for ${field.label}`);
   const options = document.createElement("div");
   options.className = "choice-list";
-  const order = [...new Set([...choices, ...entries.keys()])];
+  const order = dialingCode
+    ? choices
+    : [...new Set([...choices, ...entries.keys()])];
   function renderOptions() {
     options.replaceChildren();
     const term = search.value.trim().toLowerCase();
@@ -292,6 +309,7 @@ scan.addEventListener("click", async () => {
       return section;
     });
     matches.forEach((field) => render(field, session.entries, groups));
+    updateCount();
     fields.append(...groups.filter((group) => group.childElementCount > 1));
     if (greenhouse) {
       const link = document.createElement("a");
@@ -314,6 +332,9 @@ scan.addEventListener("click", async () => {
           : filled
             ? `${filled} supported fields are already filled.`
             : "No supported empty fields found.";
+    if (!rows.length) {
+      status.textContent = `No fields can be filled automatically on this page. ${matches.length && !greenhouse ? "The remaining detected fields require manual entry. " : ""}${status.textContent}`;
+    }
   } catch (error) {
     status.textContent =
       error instanceof Error ? error.message : "Unable to scan this page.";
@@ -381,3 +402,5 @@ byId("record").addEventListener("click", () => {
     status.textContent = "Enter the original HTTP or HTTPS job link first.";
   }
 });
+
+byId("checklist").addEventListener("change", updateCount);
