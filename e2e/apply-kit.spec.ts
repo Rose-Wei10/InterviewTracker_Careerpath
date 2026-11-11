@@ -157,13 +157,15 @@ test("confirmed application handoff checks the original job link before offering
   await page.setExtraHTTPHeaders({ "x-browser-test-user": owner });
   const jobLink = "https://employer.example.test/jobs/123?source=listing";
   await page.goto(
-    `/applications?${new URLSearchParams({ recordLink: jobLink })}`,
+    `/applications?${new URLSearchParams({ recordLink: jobLink, "record-company": "Synthetic Employer", "record-role": "Software Engineer", "record-location": "Remote", "record-applied-date": "2026-11-11" })}`,
   );
   await page.getByRole("button", { name: "Add confirmed application" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Job URL")).toHaveValue(jobLink);
-  await dialog.getByLabel("Company").fill("Synthetic Employer");
-  await dialog.getByLabel("Role").fill("Software Engineer");
+  await expect(dialog.getByLabel("Company")).toHaveValue("Synthetic Employer");
+  await expect(dialog.getByLabel("Role")).toHaveValue("Software Engineer");
+  await expect(dialog.getByLabel("Location")).toHaveValue("Remote");
+  await expect(dialog.getByLabel("Applied date")).toHaveValue("2026-11-11");
   await dialog.getByRole("button", { name: "Save application" }).click();
   await expect(dialog).not.toBeVisible();
 

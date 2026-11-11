@@ -10,22 +10,30 @@ import { Modal } from "../ui";
 export default function AddApplicationModal({
   application,
   initialJobLink,
+  initialDetails,
   onClose,
 }: {
   application?: Application | null;
   initialJobLink?: string;
+  initialDetails?: {
+    company: string;
+    role: string;
+    location: string;
+    appliedDate: string;
+  };
   onClose: () => void;
 }) {
   const api = useApi(),
     qc = useQueryClient();
   const [form, setForm] = useState({
-    company: application?.company ?? "",
-    role: application?.role ?? "",
+    company: application?.company ?? initialDetails?.company ?? "",
+    role: application?.role ?? initialDetails?.role ?? "",
     status: application?.status ?? "Applied",
     appliedDate:
       application?.appliedDate.slice(0, 10) ??
+      (initialDetails?.appliedDate || undefined) ??
       new Date().toLocaleDateString("en-CA"),
-    location: application?.location ?? "",
+    location: application?.location ?? initialDetails?.location ?? "",
     salary: application?.salary ?? "",
     jobLink: application?.jobLink ?? initialJobLink ?? "",
     notes: application?.notes ?? "",

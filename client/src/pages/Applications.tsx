@@ -370,10 +370,27 @@ export default function Applications() {
         <AddApplicationModal
           application={editing}
           initialJobLink={recordLink ?? undefined}
+          initialDetails={
+            recordLink
+              ? {
+                  company: params.get("record-company") ?? "",
+                  role: params.get("record-role") ?? "",
+                  location: params.get("record-location") ?? "",
+                  appliedDate: /^\d{4}-\d{2}-\d{2}$/.test(
+                    params.get("record-applied-date") ?? "",
+                  )
+                    ? params.get("record-applied-date")!
+                    : "",
+                }
+              : undefined
+          }
           onClose={() => {
             setEditing(undefined);
             params.delete("new");
             params.delete("recordLink");
+            ["company", "role", "location", "applied-date"].forEach((key) =>
+              params.delete(`record-${key}`),
+            );
             setParams(params);
           }}
         />

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Careerpath Apply Kit</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Careerpath Apply Kit</h1>
+      <p>Review saved answers for this application.</p>
+    </header>
+    <main>
+      <section class="card">
+        <div id="import">
+          <label for="bundle">Paste autofill data from Careerpath</label>
+          <textarea
+            id="bundle"
+            rows="3"
+            autocomplete="off"
+            spellcheck="false"
+          ></textarea>
+        </div>
+        <div id="loaded" class="bar" hidden>
+          <strong id="summary"></strong
+          ><button id="replace" type="button">Replace</button>
+        </div>
+      </section>
+      <p id="status" role="status"></p>
+      <section class="card" aria-label="Scan diagnostics">
+        <strong>Scan details</strong>
+        <p id="diagnostics">Autofill data not loaded. No tab scanned.</p>
+      </section>
+      <button id="frames" type="button" hidden>
+        Allow access to embedded application</button
+      ><button id="forget" type="button">Forget saved session</button>
+      <section id="fields" aria-label="Field suggestions"></section>
+      <section id="checklist" class="card" hidden></section>
+      <details id="track" class="card" hidden>
+        <summary>Record an application after submission</summary>
+        <label>Company<input id="company" /></label
+        ><label>Role<input id="role" /></label
+        ><label>Location<input id="location" /></label
+        ><label>Applied date<input id="applied-date" type="date" /></label>
+        <p>
+          Clicking Submit is only an attempt. Save after a receipt or
+          confirmation.
+        </p>
+        <label for="job-link">Original job link</label>
+        <input id="job-link" type="url" />
+        <label
+          ><input id="confirmed" type="checkbox" /> The employer confirmed
+          submission</label
+        >
+        <button id="record" type="button" disabled>
+          Check Careerpath for duplicates
+        </button>
+      </details>
+    </main>
+    <footer>
+      <div class="bar">
+        <button id="scan" type="button">Scan / retry</button
+        ><button id="select-ready" type="button">Select all ready fields</button
+        ><button id="clear" type="button">Clear selection</button>
+      </div>
+      <div class="bar">
+        <div>
+          <div id="available">0 fields available to autofill</div>
+          <div id="count">0 selected for autofill</div>
+          <div id="manual-count">0 manual items checked</div>
+        </div>
+        <button
+          id="fill"
+          class="primary"
+          type="button"
+          aria-describedby="fill-help"
+          disabled
+        >
+          Fill selected
+        </button>
+      </div>
+      <p id="fill-help" role="status">
+        Scan the application page to find fields to autofill.
+      </p>
+    </footer>
+    <script type="module" src="panel.mjs"></script>
+  </body>
+</html>

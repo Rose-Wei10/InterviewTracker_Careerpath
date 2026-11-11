@@ -89,6 +89,25 @@ export function suggestions(field, entries) {
     return { choices, suggested: choices.length === 1 ? choices[0] : null };
   }
   if (label === "select date") return { choices: [], suggested: null };
+  const topic = (value) =>
+    /\b(race|ethnicity|ethnic)\b/i.test(value)
+      ? "race"
+      : /\bveteran\b/i.test(value)
+        ? "veteran"
+        : /\bdisabilit/i.test(value)
+          ? "disability"
+          : /\bgender\b/i.test(value)
+            ? "gender"
+            : /\bpronouns?\b/i.test(value)
+              ? "pronoun"
+              : null;
+  const demographic = topic(field.label);
+  if (demographic) {
+    const choices = entries.flatMap((entry, index) =>
+      topic(entry.prompt) === demographic ? [index] : [],
+    );
+    return { choices, suggested: choices.length === 1 ? choices[0] : null };
+  }
   const tokens = words(field.label);
   const semantic = {
     "given-name": "first-name",
@@ -101,6 +120,21 @@ export function suggestions(field, entries) {
     "address-level2": "city",
     "country-name": "country",
   };
+  const distinct = {
+    country: ["country", "residence country", "country of residence"],
+    region: ["state", "province", "state or region"],
+    postal: ["postal code", "zip code", "postcode", "zip"],
+    phone: ["phone", "phone number", "mobile number", "telephone"],
+  };
+  const exactKey = Object.entries(distinct).find(([, names]) =>
+    names.includes(label),
+  )?.[0];
+  if (exactKey) {
+    const choices = entries.flatMap((entry, index) =>
+      entry.starterKey === exactKey ? [index] : [],
+    );
+    return { choices, suggested: choices.length === 1 ? choices[0] : null };
+  }
   const bareLocation = label === "location";
   const ranks = entries
     .map((entry, index) => {
@@ -141,9 +175,45 @@ export function suggestions(field, entries) {
 
 export function needsReview(field, entry) {
   return (
-    entry.review ||
+    entry?.review ||
     /\b(salary|compensation|pay|wage|eligib\w*|consent|agree|acknowledg\w*|certif\w*|conflict\w*|government official|previous employee|referral|business interest|competes?|related to|relationship|sponsor\w*|visa|work authori[sz]\w*|eligible to work|legally authori[sz]\w*|why\s+(?:do|are|would|this|our)|motivation)\b/i.test(
-      `${field.label} ${entry.prompt}`,
+      `${field.label} ${entry?.prompt || ""}`,
     )
   );
+}
+
+// Conservative equivalents: compare only within the question's own option list.
+export function optionMatch(field, answer) {
+  if (field.kind === "text") return answer;
+  if (isDialingCode(field)) {
+    if (!/^\+[1-9]\d{0,2}$/.test(answer.trim())) return null;
+    const matches = (field.options || []).filter(
+      (option) =>
+        option.trim() === answer.trim() ||
+        option.match(/\(?(\+[1-9]\d{0,2})\)?\s*$/)?.[1] === answer.trim(),
+    );
+    return matches.length === 1 ? matches[0] : null;
+  }
+  const canonical = (value) => {
+    const normalized = normalize(value).replace(/^the /, "");
+    if (
+      /veteran/i.test(field.label) &&
+      /^(not a protected veteran|i am not a protected veteran|i am not a veteran|not a veteran)$/.test(
+        normalized,
+      )
+    )
+      return "not veteran";
+    if (
+      /disabilit/i.test(field.label) &&
+      /^(no disability|no i do not have a disability|i do not have a disability|no i don t have a disability or a history record of having a disability)$/.test(
+        normalized,
+      )
+    )
+      return "no disability";
+    return normalized;
+  };
+  const matches = (field.options || []).filter(
+    (option) => canonical(option) === canonical(answer),
+  );
+  return matches.length === 1 ? matches[0] : null;
 }

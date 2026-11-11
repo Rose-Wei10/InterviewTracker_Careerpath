@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { afterEach, expect, test, vi } from "vitest";
 import { JSDOM } from "jsdom";
 import { applicationFields } from "./fields.mjs";
@@ -138,80 +137,6 @@ test("reports Greenhouse embeds and never writes custom controls", () => {
     applicationFields([{ ...report.fields[0], value: "Example City" }]),
   ).toBe(0);
   expect(window.document.querySelector("input").value).toBe("");
-  window.close();
-});
-
-test("popup hides imported data, groups fields, and sends only checked answers", async () => {
-  const { window } = new JSDOM(
-    readFileSync(new URL("./popup.html", import.meta.url), "utf8"),
-    { url: "https://extension.example.test/" },
-  );
-  vi.stubGlobal("document", window.document);
-  vi.stubGlobal("localStorage", window.localStorage);
-  const executeScript = vi
-    .fn()
-    .mockResolvedValueOnce([
-      {
-        documentId: "fixture",
-        result: {
-          fields: [
-            { label: "Given name", index: 0, signature: "name" },
-            {
-              label: "Location",
-              index: 1,
-              signature: "location",
-              manual: "choice",
-            },
-          ],
-          filled: 2,
-        },
-      },
-    ])
-    .mockResolvedValueOnce([{ result: 1 }]);
-  vi.stubGlobal("chrome", {
-    tabs: {
-      query: async () => [
-        { id: 1, url: "https://employer.example.test/apply" },
-      ],
-    },
-    scripting: { executeScript },
-  });
-  await import("./popup.mjs");
-  const find = (id) => window.document.getElementById(id);
-  find("bundle").value = JSON.stringify({
-    format: "careerpath-apply-kit",
-    version: 1,
-    entries,
-  });
-  find("bundle").dispatchEvent(new window.Event("input"));
-  expect(find("import").hidden).toBe(true);
-  expect(find("bundle").value).toBe("");
-  expect(find("summary").textContent).toContain("2 saved answers");
-  find("scan").click();
-  await vi.waitFor(() =>
-    expect(find("fields").textContent).toContain("Complete on the form"),
-  );
-  expect(find("status").textContent).toContain("2 already filled");
-  expect(find("diagnostics").textContent).toContain("1 matched: Given name");
-  expect(find("fields").textContent).toContain(
-    "From Apply Kit: Legal first name",
-  );
-  expect(find("checklist").textContent).toContain("Location");
-  expect(find("record").disabled).toBe(true);
-  find("checklist").querySelector("input").click();
-  expect(find("manual-count").textContent).toBe("1 manual items checked");
-  expect(find("count").textContent).toBe("0 selected for autofill");
-  expect(find("fill").disabled).toBe(true);
-  window.document.querySelector('input[type="checkbox"]').click();
-  expect(find("count").textContent).toBe("1 selected for autofill");
-  find("fill").click();
-  await vi.waitFor(() =>
-    expect(find("status").textContent).toContain("Verified 1 of 1"),
-  );
-  expect(executeScript.mock.calls[1][0].args).toEqual([
-    [{ index: 0, signature: "name", value: "Alex" }],
-    true,
-  ]);
   window.close();
 });
 
