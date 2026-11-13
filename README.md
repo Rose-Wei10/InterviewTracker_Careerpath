@@ -15,7 +15,7 @@ The current workspace shown with synthetic browser-test data.
 - **Workspace:** soft pink, lavender and blue gradients in light mode, with a dark theme and responsive layouts. On desktop, the collapse button sits beside the Careerpath logo, the account button sits at the bottom of the sidebar, and a transparent Careerpath breadcrumb replaces the top banner. Navigation and Match history can collapse independently.
 - **Overview:** total applications, interviews, offers and response rate appear first. The application funnel sits beside recent activity on desktop, with weekly/monthly trends and the action center below. The interview count and rate use current application stages. Totals, offers and funnel stages open filtered applications while preserving the analytics date range. Reminders and manual 30-day review stay independent of that range.
 - **Email updates:** manually sync recruiting emails labeled Careerpath in Gmail, review suggested matches and link messages to applications. See [Gmail setup](docs/GMAIL.md).
-- **Apply Kit:** save private application details and reusable answers across devices, search by topic or answer, and copy individual responses. Starter questions cover software engineering and mentoring, and you can add your own. Try the [free local Chrome autofill extension](extensions/apply-kit/README.md).
+- **Apply Kit:** save private application details and reusable answers across devices, search by topic or answer, and copy individual responses. Starter questions cover software engineering and mentoring, and you can add your own. Use the [free local Chrome side-panel extension](extensions/apply-kit/README.md) to preview saved answers, select fields to fill, and verify retained values beside an employer’s form.
 - **Applications:** create, edit, detail and delete; company/role search; location/status/date filters; sorting; 10 rows per page; notes, salary, HTTP(S) job links, resume selection and event scheduling; quick status updates, removable filter chips and reset filters. Search remains synchronized with browser history.
 - **CSV:** transactional imports of up to 500 rows and filtered exports of up to 10,000 rows; invalid batches fail without partial imports; formula-leading export cells are escaped.
 - **Resume library:** named PDFs, 4 MB upload limit, private S3/Blob storage, one-minute downloads and ownership checks. Each resume opens a job-specific review with an optional extracted-text preview. Legacy object keys remain unchanged.
@@ -24,6 +24,34 @@ The current workspace shown with synthetic browser-test data.
 - **Dashboard reminders:** one day, one hour, 15 minutes or None. Upcoming events cover seven days; Needs attention includes due reminders and overdue unfinished events regardless of analytics dates. No delivery service or worker is needed; open the app to see reminders.
 - **30-day review:** select eligible Applied applications manually, ten per page. The server rechecks ownership, age and current status before marking selected records Ghosted and recording activity.
 - **UI:** reusable dialogs, native focus handling, labeled inputs, responsive navigation, light/dark mode, toast feedback, skeletons, actionable empty/error states and delete confirmation.
+
+## Apply Kit autofill
+
+The Chrome extension runs locally with rule-based matching. It needs no paid AI, extra hosting, AWS service or Chrome Web Store listing. Careerpath stores your saved Apply Kit answers in its existing owner-scoped database; the extension receives only the export you choose to paste.
+
+1. Open `chrome://extensions` in **Chrome 116+**, enable **Developer mode**, choose **Load unpacked**, and select `extensions/apply-kit`. For an existing installation, click **Reload** after updating the files.
+2. In Careerpath’s **Apply Kit**, save your answers and click **Copy autofill data**. On the employer tab, click the extension icon → **Open side panel**, then paste the export. Resize the panel with Chrome’s divider.
+3. Click **Scan / retry**. Review the application question, proposed answer, saved-answer source and exact choice. Scan, selection counts and fill controls remain visible while results scroll.
+4. Select individual fields or **Select all ready fields**, then **Fill selected**. Review the read-back results. Existing values and manually edited fields are preserved; rescan after navigation or form changes.
+5. Upload your résumé and submit directly on the employer’s form. Only after an employer receipt or confirmation, use the panel’s application-record section to hand company, role, location, date and original job URL to Careerpath’s duplicate-check/add/edit flow. Review and save the record there.
+
+| Group | What it means |
+| --- | --- |
+| **Ready to fill** | A clear saved-answer match, with a unique matching option for choice controls. Bulk selection includes only these fields. |
+| **Needs review** | Missing or ambiguous answers, demographics, eligibility, consent/conflict questions, unsupported controls or failed writes. Demographic suggestions require individual approval for each application. |
+| **Completed** | The value was read back and validated during the last scan or fill. Rescan after editing the employer form. |
+
+Text fields, native selects, radio/checkbox groups and accessible custom dropdowns/autocomplete are supported when their questions, options and selection state can be verified. Scan may briefly open empty custom menus to inspect choices; it does not select an option. Typing into autocomplete alone does not count as completion. Phone dialing code, residence country, state and postal code are matched separately.
+
+Permitted iframe documents can be scanned, including accessible Greenhouse and Ashby embeds. Cross-origin embeds require the panel’s explicit **Allow access to embedded application** grant. Browser restrictions, inaccessible option lists and controls without a reliable commitment signal still need manual entry. This is not a claim of universal ATS compatibility.
+
+Manual reminders stay separate from autofill selections. The panel reports a résumé filename and native validation state when available; a selected file does not prove the employer accepted the upload. Confirm its preview or receipt and check for upload errors on the employer form.
+
+Answers and per-tab/page progress remain in Chrome’s session storage across panel closes and page switches. Use **Forget saved session** to clear them; they are not synced or saved in extension local storage. Optional site-access grants persist until removed in Chrome. Only explicitly approved answers are written to an employer page. The extension never clicks Submit. Duplicate checks use the exact original URL, so URL variants may need manual review.
+
+![Careerpath Apply Kit side panel after filling synthetic fields, showing demographic review, Completed results and fixed scan/fill controls](docs/screenshots/apply-kit-side-panel.png)
+
+The screenshot uses synthetic data from the completed isolated Chrome check. See the [extension guide](extensions/apply-kit/README.md) for setup and [provider verification notes](extensions/apply-kit/VERIFICATION.md) for live-inspection evidence and manual limitations. The metadata handoff needs the updated Careerpath frontend; reloading the extension does not deploy the app.
 
 ## Storage cutover
 
@@ -52,6 +80,7 @@ flowchart LR
 
 | Model          | Purpose                                                                                                                                  |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| ApplyKitEntry  | Owner-scoped saved prompt/answer, optional stable starter key, category and revision for stale-edit checks |
 | User           | Clerk ID as primary key; optional legacy email retained                                                                                  |
 | JobApplication | Owner, opportunity details, current status, optional resume and retained legacy follow-up date                                           |
 | Resume         | Owner, preserved S3 object key/legacy URL, name, description, version and optional file metadata                                         |
@@ -123,6 +152,8 @@ Bearer authentication is required for `/api/*`. Errors use `{message, errors?: [
 
 | Endpoint                                        | Methods / behavior                                                                                         |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/api/apply-kit` | GET owned saved entries; POST starter answers or custom questions |
+| `/api/apply-kit/:id` | PATCH or DELETE owned entry with revision checks |
 | `/api/applications`                             | GET paginated list; POST create                                                                            |
 | `/api/applications/:id`                         | GET detail with timeline/rounds; PUT or PATCH partial update; DELETE                                       |
 | `/api/applications/import`                      | POST `{csv}`; atomic validation/import                                                                     |
@@ -157,6 +188,10 @@ npx playwright install chromium
 npm run test:full         # disposable PostgreSQL, migration preservation, API and browser tests
 npm run test:db           # same isolated DB checks without browser tests
 npm audit
+
+# Optional extension-only checks; local synthetic data, no employer submissions
+npx vitest run extensions/apply-kit
+node extensions/apply-kit/browser-check.mjs
 ```
 
 The test runner ignores your DATABASE_URL, starts PostgreSQL on an unused local port in a temporary directory, and creates separate test databases. It checks the entire fresh migration chain and seeds a legacy resume before applying the additive migration to assert preservation. PostgreSQL binaries are a development-only dependency. In constrained environments, allow local child processes and loopback ports; no Docker daemon is required.
