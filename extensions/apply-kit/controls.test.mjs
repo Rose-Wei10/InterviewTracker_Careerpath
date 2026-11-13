@@ -243,12 +243,31 @@ test("side panel imports, previews, keeps manual reminders separate and restores
   await vi.waitFor(() =>
     expect($("summary").textContent).toContain("2 saved answers"),
   );
+  expect($("diagnostics").textContent).toBe("No tab scanned yet.");
+  const onUpdated = chrome.tabs.onUpdated.addListener.mock.calls[0][0];
+  onUpdated(
+    1,
+    { url: "https://www.linkedin.com/jobs/view/123456/" },
+    { id: 1, url: "https://www.linkedin.com/jobs/view/123456/", active: true },
+  );
   $("scan").click();
   await vi.waitFor(() =>
     expect($("fields").textContent).toContain("Exact option: Asian"),
   );
+  expect($("job-link").value).toBe(
+    "https://www.linkedin.com/jobs/view/123456/",
+  );
   $("checklist").querySelector("input").click();
   expect($("count").textContent).toContain("0 fields");
+  const override = $("fields").querySelector(
+    '[aria-label="Application-only answer for Race"]',
+  );
+  override.value = "White";
+  [...override.parentElement.querySelectorAll("button")]
+    .find((button) => button.textContent === "Use for this application")
+    .click();
+  expect(storage.applyKit.entries[1].answer).toBe("Asian");
+  expect($("fields").textContent).toContain("application-only override");
   $("select-ready").click();
   expect($("count").textContent).toContain("1 fields");
   expect($("fields").querySelectorAll("input[type=checkbox]")[1].checked).toBe(
@@ -262,5 +281,122 @@ test("side panel imports, previews, keeps manual reminders separate and restores
   expect(
     storage.applyKit.pages["1:https://employer.test/apply"].results,
   ).toBeTruthy();
+  w.close();
+});
+
+test("GPA maps to explicit brackets while overlapping ranges and narrower identity remain undecided", () => {
+  expect(
+    optionMatch(
+      { kind: "select", label: "GPA", options: ["3.0+", "3.5+", "3.75+"] },
+      "3.81",
+    ),
+  ).toBe("3.75+");
+  expect(
+    optionMatch(
+      { kind: "select", label: "GPA", options: ["3.5–3.74", "3.75–4.0"] },
+      "3.81",
+    ),
+  ).toBe("3.75–4.0");
+  expect(
+    optionMatch(
+      { kind: "select", label: "GPA", options: ["3.5–3.75", "3.75–4.0"] },
+      "3.75",
+    ),
+  ).toBeNull();
+  expect(
+    optionMatch(
+      {
+        kind: "select",
+        label: "Race / Asian subgroup",
+        options: ["East Asian", "South Asian"],
+      },
+      "Asian",
+    ),
+  ).toBeNull();
+  expect(
+    optionMatch(
+      { kind: "select", label: "Graduation", options: ["December 2027"] },
+      "January 2028",
+    ),
+  ).toBeNull();
+});
+
+test("targeted menu inspection opens only the requested empty control with keyboard fallback", async () => {
+  const w = fixture(
+    '<label>Country<input role="combobox" aria-controls="countries"></label><div id="countries"></div><label>Authorization<input role="combobox" aria-controls="auth"></label><div id="auth"></div>',
+  );
+  const menus = [...w.document.querySelectorAll("input")];
+  const clicks = menus.map((el) => {
+    const fn = vi.fn();
+    el.addEventListener("click", fn);
+    el.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown")
+        w.document.getElementById(el.getAttribute("aria-controls")).innerHTML =
+          '<div role="option">Available choice</div>';
+    });
+    return fn;
+  });
+  const signature = JSON.stringify(["Country", "combo", "", ""]);
+  const scan = await formControls(null, { signature });
+  expect(scan.fields[0].options).toEqual(["Available choice"]);
+  expect(clicks[0]).toHaveBeenCalledOnce();
+  expect(clicks[1]).not.toHaveBeenCalled();
+  w.close();
+});
+
+test("upload diagnostics distinguish input identity, required status, filename and exposed errors", async () => {
+  const w = fixture(
+    '<label for="cv">Resume/CV*</label><input id="cv" name="resume" type="file" required aria-invalid="true" aria-errormessage="upload-error"><p id="upload-error" role="alert">Upload timed out. Retry.</p>',
+  );
+  Object.defineProperty(w.document.querySelector("input"), "files", {
+    value: [{ name: "synthetic.pdf" }],
+  });
+  expect((await formControls()).uploads[0]).toMatchObject({
+    label: "Resume/CV",
+    inputId: "cv",
+    inputName: "resume",
+    required: true,
+    filename: "synthetic.pdf",
+    accepted: false,
+    errors: ["Upload timed out. Retry."],
+  });
+  w.close();
+});
+
+test("Eightfold query text is not completed unless the selection survives blur and is exposed again", async () => {
+  const { window: w } = new JSDOM(
+    '<label>Authorization<input role="combobox" aria-controls="menu" aria-expanded="true" required></label><div id="menu"><div role="option">是</div></div>',
+    { url: "https://netflix.eightfold.ai/careers/apply" },
+  );
+  w.HTMLElement.prototype.getClientRects = () => [{ width: 20 }];
+  for (const key of [
+    "document",
+    "getComputedStyle",
+    "HTMLInputElement",
+    "HTMLSelectElement",
+    "HTMLTextAreaElement",
+    "Event",
+  ])
+    vi.stubGlobal(key, w[key]);
+  const input = w.document.querySelector("input"),
+    option = w.document.querySelector("[role=option]");
+  const scan = await formControls();
+  option.onclick = () => {
+    input.value = "是";
+    input.setAttribute("aria-expanded", "false");
+  };
+  expect(
+    (await formControls([request(scan.fields[0], "是", "是")]))[0].ok,
+  ).toBe(false);
+  input.value = "";
+  const fresh = await formControls();
+  option.onclick = () => {
+    input.value = "是";
+    input.setAttribute("aria-expanded", "false");
+    option.setAttribute("aria-selected", "true");
+  };
+  expect(
+    (await formControls([request(fresh.fields[0], "是", "是")]))[0].ok,
+  ).toBe(true);
   w.close();
 });

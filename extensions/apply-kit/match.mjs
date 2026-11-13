@@ -194,6 +194,40 @@ export function optionMatch(field, answer) {
     );
     return matches.length === 1 ? matches[0] : null;
   }
+  if (
+    /\b(gpa|grade point average)\b/i.test(field.label) &&
+    /^\d+(?:\.\d+)?$/.test(answer.trim())
+  ) {
+    const exact = (field.options || []).filter(
+      (option) => option.trim() === answer.trim(),
+    );
+    if (exact.length) return exact.length === 1 ? exact[0] : null;
+    const number = Number(answer);
+    const candidates = (field.options || []).flatMap((option) => {
+      const range = option
+        .trim()
+        .match(/^(\d+(?:\.\d+)?)\s*[-–—]\s*(\d+(?:\.\d+)?)$/);
+      if (range)
+        return number >= Number(range[1]) && number <= Number(range[2])
+          ? [{ option, floor: Number(range[1]), range: true }]
+          : [];
+      const lower = option
+        .trim()
+        .match(
+          /^(\d+(?:\.\d+)?)\s*(?:\+|or (?:above|higher)|and (?:above|higher))$/i,
+        );
+      return lower && number >= Number(lower[1])
+        ? [{ option, floor: Number(lower[1]), range: false }]
+        : [];
+    });
+    if (candidates.some((candidate) => candidate.range))
+      return candidates.length === 1 ? candidates[0].option : null;
+    const best = candidates.filter(
+      (candidate) =>
+        candidate.floor === Math.max(...candidates.map((item) => item.floor)),
+    );
+    return best.length === 1 ? best[0].option : null;
+  }
   const canonical = (value) => {
     const normalized = normalize(value).replace(/^the /, "");
     if (

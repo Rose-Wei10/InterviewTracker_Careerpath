@@ -52,11 +52,39 @@ function text(tag, value, parent) {
   parent.append(el);
   return el;
 }
+function rememberOriginal(tab) {
+  if (!tab?.id) return;
+  state.jobOrigins ||= {};
+  if (
+    /^https:\/\/(?:www\.)?linkedin\.com\/jobs\/view\/\d+(?:[/?#]|$)/i.test(
+      tab.url || "",
+    )
+  )
+    state.jobOrigins[tab.id] = tab.url;
+  else if (
+    tab.openerTabId &&
+    state.jobOrigins[tab.openerTabId] &&
+    !state.jobOrigins[tab.id]
+  )
+    state.jobOrigins[tab.id] = state.jobOrigins[tab.openerTabId];
+}
+function focusField(key) {
+  [...$("fields").querySelectorAll("article")]
+    .find((card) => card.dataset.fieldKey === key)
+    ?.querySelector("input[type=checkbox]")
+    ?.focus();
+}
 function render() {
   rows = [];
   $("fields").replaceChildren();
   $("checklist").replaceChildren();
   if (!page) {
+    $("diagnostics").textContent = state.entries.length
+      ? "No tab scanned yet."
+      : "Autofill data not loaded. No tab scanned yet.";
+    $("track").hidden = true;
+    $("checklist").hidden = true;
+    $("frames").hidden = true;
     updateCount();
     return;
   }
@@ -75,16 +103,21 @@ function render() {
     const { suggested, choices } = suggestions(field, state.entries);
     const entry = state.entries[suggested];
     const option = entry ? optionMatch(field, entry.answer) : null;
-    const completed = (result?.ok && !field.current) || field.verified;
+    const completed =
+      !field.invalid &&
+      ((result?.ok && (!field.current || field.current === result.value)) ||
+        field.verified);
     const ready =
       !completed &&
       !field.filled &&
       !!option &&
       !field.demographic &&
+      !page.overrides?.[key] &&
       !needsReview(field, entry || { prompt: "", review: false });
     const group = groups[completed ? 2 : ready ? 0 : 1];
     const card = document.createElement("article");
     card.className = "card";
+    card.dataset.fieldKey = key;
     group.append(card);
     text("strong", field.label, card);
     if (completed) {
@@ -101,6 +134,10 @@ function render() {
         `Existing value preserved: ${field.current}. Verify it on the form.`,
         card,
       );
+      if (field.kind === "combo") {
+        const retry = text("button", "Retry this field", card);
+        retry.onclick = () => retryField(field);
+      }
       continue;
     }
     let selected = page.sources?.[key] ?? suggested;
@@ -161,6 +198,7 @@ function render() {
         b.className = "answer-choice";
         b.onclick = () => {
           selected = index;
+          delete page.overrides?.[key];
           page.sources ||= {};
           page.sources[key] = index;
           delete page.selected?.[key];
@@ -175,9 +213,75 @@ function render() {
       if (details.open) drawChoices();
     };
     search.oninput = drawChoices;
+    const overrideDetails = document.createElement("details");
+    text("summary", "Application-only answer / option", overrideDetails);
+    text(
+      "p",
+      "Use only for this application. Your general Apply Kit answer stays unchanged. Choose translated options by their displayed wording; do not guess identity or eligibility.",
+      overrideDetails,
+    );
+    const override = document.createElement(
+      field.kind === "text" ? "textarea" : "select",
+    );
+    override.setAttribute(
+      "aria-label",
+      `Application-only answer for ${field.label}`,
+    );
+    if (field.kind === "text") {
+      override.maxLength = 10000;
+      override.value = page.overrides?.[key]?.answer || "";
+    } else {
+      const empty = text(
+        "option",
+        "Choose the exact employer option",
+        override,
+      );
+      empty.value = "";
+      for (const value of field.options || []) {
+        const option = text("option", value, override);
+        option.value = value;
+      }
+      override.value = page.overrides?.[key]?.answer || "";
+    }
+    overrideDetails.append(override);
+    const saveOverride = text(
+      "button",
+      "Use for this application",
+      overrideDetails,
+    );
+    saveOverride.onclick = () => {
+      if (!override.value.trim()) {
+        message(
+          "Enter an answer or choose an available employer option first.",
+        );
+        return;
+      }
+      page.overrides ||= {};
+      page.overrides[key] = { answer: override.value };
+      check.checked = false;
+      delete page.selected?.[key];
+      render();
+      focusField(key);
+      save();
+    };
+    const clearOverride = text(
+      "button",
+      "Use saved answer instead",
+      overrideDetails,
+    );
+    clearOverride.onclick = () => {
+      delete page.overrides?.[key];
+      override.value = "";
+      check.checked = false;
+      delete page.selected?.[key];
+      render();
+      focusField(key);
+      save();
+    };
+    card.append(overrideDetails);
     const copy = text("button", "Copy proposed answer", card);
     copy.onclick = async () => {
-      const entry = state.entries[selected];
+      const entry = page.overrides?.[key] || state.entries[selected];
       if (!entry) return;
       try {
         await navigator.clipboard.writeText(entry.answer);
@@ -190,14 +294,17 @@ function render() {
     };
     let approvedOption = null;
     const refresh = () => {
-      const e = state.entries[selected];
+      const applicationOverride = page.overrides?.[key];
+      const e = applicationOverride || state.entries[selected];
       approvedOption = e ? optionMatch(field, e.answer) : null;
       preview.textContent = e
         ? `Proposed answer: ${e.answer}`
         : "No reliable saved answer. Choose a saved answer or complete on the form.";
-      source.textContent = e
-        ? `Source: Apply Kit → ${e.prompt}`
-        : "Source: none";
+      source.textContent = applicationOverride
+        ? "Source: application-only override · general answer unchanged"
+        : e
+          ? `Source: Apply Kit → ${e.prompt}`
+          : "Source: none";
       exact.textContent = approvedOption
         ? field.kind === "text"
           ? "Will enter the proposed text."
@@ -207,6 +314,11 @@ function render() {
           : field.kind === "combo"
             ? "Open the dropdown on the employer form and rescan to preview its available options."
             : "No unique matching option is available. Complete on the form or choose another saved answer.";
+      label.lastChild.textContent = applicationOverride
+        ? " I reviewed this application-only answer"
+        : field.demographic
+          ? " I reviewed this demographic answer for this application"
+          : " Fill this field";
       check.disabled = !approvedOption;
       copy.disabled = !e;
       updateCount();
@@ -223,20 +335,23 @@ function render() {
       check,
       key,
       get ready() {
-        return ready && selected === suggested;
+        return ready && selected === suggested && !page.overrides?.[key];
       },
       get value() {
-        return state.entries[selected]?.answer;
+        return (page.overrides?.[key] || state.entries[selected])?.answer;
       },
       get option() {
         return approvedOption;
       },
     });
     refresh();
-    if (result && !result.ok) {
-      text("p", result.reason, card);
-      const retry = text("button", "Rescan to retry", card);
-      retry.onclick = scan;
+    if (result && !result.ok) text("p", result.reason, card);
+    if (
+      (result && !result.ok) ||
+      (field.kind !== "text" && !field.options?.length)
+    ) {
+      const retry = text("button", "Retry this field", card);
+      retry.onclick = () => retryField(field);
     }
   }
   groups.forEach((group) => {
@@ -245,14 +360,27 @@ function render() {
   const checklist = $("checklist");
   checklist.hidden = false;
   text("h2", "Manual reminders · not autofill selections", checklist);
-  for (const upload of page.uploads)
+  for (const upload of page.uploads) {
+    const item = document.createElement("div");
+    checklist.append(item);
+    text("strong", upload.label, item);
     text(
       "p",
-      upload.filename
-        ? `${upload.label}: ${upload.filename} · ${upload.accepted ? "File selected; employer acceptance still needs confirmation." : "Not accepted. Retry the upload on the form."}`
-        : `${upload.label}: no file selected. Upload on the form.`,
-      checklist,
+      `File input: ${upload.inputId ? "#" + upload.inputId : upload.inputName ? "name=" + upload.inputName : "input[type=file] · " + ((upload.inputIndex ?? 0) + 1)} · ${upload.required ? "Required" : "Not marked required"}`,
+      item,
     );
+    text(
+      "p",
+      `Current filename (native input): ${upload.filename || "None exposed — check the employer’s uploaded-file preview"}`,
+      item,
+    );
+    text(
+      "p",
+      `Upload errors: ${upload.errors?.length ? upload.errors.join(" ") : "No exposed errors. Employer acceptance is not confirmed."}`,
+      item,
+    );
+    if (upload.accept) text("p", `Accepted file types: ${upload.accept}`, item);
+  }
   for (const reminder of [
     "Review uploaded résumé and any employer upload errors",
     "Review required fields and employer acknowledgments",
@@ -298,6 +426,7 @@ async function scan() {
       target: { tabId: tab.id, allFrames: true },
       func: formControls,
     });
+    rememberOriginal(tab);
     const key = pageKey(tab),
       previous = state.pages[key];
     page = {
@@ -305,7 +434,8 @@ async function scan() {
       tabId: tab.id,
       url: tab.url,
       title: tab.title,
-      originalUrl: previous?.originalUrl || tab.url,
+      originalUrl:
+        previous?.originalUrl || state.jobOrigins?.[tab.id] || tab.url,
       frames: results.map((r) => ({
         documentId: r.documentId,
         frameId: r.frameId,
@@ -317,7 +447,12 @@ async function scan() {
         })),
       ),
       embeds: results.flatMap((r) => r.result?.frames || []),
-      uploads: results.flatMap((r) => r.result?.uploads || []),
+      uploads: results.flatMap((r) =>
+        (r.result?.uploads || []).map((upload) => ({
+          ...upload,
+          documentId: r.documentId,
+        })),
+      ),
       selected: {},
       sources: previous?.sources || {},
       results: {},
@@ -344,6 +479,73 @@ async function scan() {
   } catch (error) {
     message(
       `${error.message} Click the extension icon on this tab to grant temporary access, then try again.`,
+    );
+  } finally {
+    $("scan").disabled = false;
+  }
+}
+async function retryField(field) {
+  const current = page;
+  $("scan").disabled = true;
+  message(`Inspecting options for ${field.label}…`);
+  try {
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (tab?.id !== current.tabId || tab.url !== current.url)
+      throw Error("The page changed. Scan this application first.");
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId: current.tabId, documentIds: [field.documentId] },
+      func: formControls,
+      args: [null, { signature: field.signature }],
+    });
+    const previous = current.fields.filter(
+      (item) => item.documentId === field.documentId,
+    );
+    current.fields = current.fields
+      .filter((item) => item.documentId !== field.documentId)
+      .concat(
+        result.result.fields.map((item) => ({
+          ...item,
+          documentId: field.documentId,
+          options:
+            item.signature === field.signature
+              ? item.options
+              : item.options.length
+                ? item.options
+                : previous.find((old) => old.signature === item.signature)
+                    ?.options || [],
+        })),
+      );
+    current.uploads = current.uploads
+      .filter((upload) => upload.documentId !== field.documentId)
+      .concat(
+        (result.result.uploads || []).map((upload) => ({
+          ...upload,
+          documentId: field.documentId,
+        })),
+      );
+    current.selected = {};
+    delete current.results?.[
+      `${field.documentId}:${field.index}:${field.signature}`
+    ];
+    await save();
+    if (page === current) {
+      render();
+      focusField(`${field.documentId}:${field.index}:${field.signature}`);
+    }
+    const inspected = result.result.fields.find(
+      (item) => item.signature === field.signature,
+    );
+    message(
+      inspected?.options?.length || inspected?.kind === "text"
+        ? `Refreshed ${field.label}. Review its exact option and select it before filling.`
+        : `No accessible options exposed for ${field.label}. Complete it on the employer form.`,
+    );
+  } catch (error) {
+    message(
+      `${error.message} Complete this field on the employer form if it remains unavailable.`,
     );
   } finally {
     $("scan").disabled = false;
@@ -475,7 +677,11 @@ for (const id of [
   $(id).onchange = () => {
     if (!page) return;
     page[id] = id === "confirmed" ? $(id).checked : $(id).value;
-    if (id === "job-link") page.originalUrl = $(id).value;
+    if (id === "job-link") {
+      page.originalUrl = $(id).value;
+      state.jobOrigins ||= {};
+      state.jobOrigins[page.tabId] = $(id).value;
+    }
     $("record").disabled = !page.confirmed;
     save();
   };
@@ -497,17 +703,25 @@ $("record").onclick = () => {
 const saved = await chrome.storage.session.get("applyKit");
 if (saved.applyKit) state = saved.applyKit;
 const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+rememberOriginal(active);
+await save();
 page = state.pages[pageKey(active || {})];
 load();
 render();
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   const tab = await chrome.tabs.get(tabId);
+  rememberOriginal(tab);
+  await save();
   page = state.pages[pageKey(tab)];
   render();
   message("Active tab changed. Scan before filling.");
 });
 
 chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
+  if (tab.active || tabId === page?.tabId || state.jobOrigins?.[tabId]) {
+    rememberOriginal(tab);
+    save();
+  }
   if (tabId !== page?.tabId || !change.url || change.url === page.url) return;
   page = state.pages[pageKey(tab)];
   render();

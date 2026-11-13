@@ -1,5 +1,5 @@
 // Serialized by Chrome into each permitted frame; no imported helpers here.
-export async function formControls(approved = null) {
+export async function formControls(approved = null, inspect = null) {
   const visible = (el) =>
     !!el.getClientRects().length &&
     !el.closest("[hidden],[inert],[aria-hidden=true]") &&
@@ -79,7 +79,9 @@ export async function formControls(approved = null) {
       !/(?:^|\s)(?:cc-\S+|current-password|new-password|one-time-code|bday(?:-\w+)?)(?:\s|$)/i.test(
         el.autocomplete || "",
       ) &&
-      !/^(password|hidden|submit|button|reset|file)$/i.test(el.type),
+      !/^(password|hidden|submit|reset|file)$/i.test(el.type) &&
+      (el.type !== "button" ||
+        el.matches("[role=combobox],[aria-haspopup=listbox]")),
   );
   const groups = new Set();
   const descriptors = [];
@@ -173,20 +175,40 @@ export async function formControls(approved = null) {
                   text(el)) || ""
             : el.value || "";
     const signature = JSON.stringify([question, kind, el.id, el.name]);
-    let options = optionNodes().map(optionText);
-    if (!approved && kind === "combo" && !current() && !options.length) {
-      el.click();
-      for (let wait = 0; wait < 10 && !optionNodes().length; wait++)
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      options = optionNodes().map(optionText);
+    const keyEvent = (key) =>
       el.dispatchEvent(
         new el.ownerDocument.defaultView.KeyboardEvent("keydown", {
-          key: "Escape",
-          code: "Escape",
+          key,
+          code: key,
           bubbles: true,
         }),
       );
+    const openMenu = async () => {
+      el.focus();
+      el.click();
+      for (let wait = 0; wait < 15 && !optionNodes().length; wait++) {
+        if (wait === 1) keyEvent("ArrowDown");
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    };
+    const closeMenu = () => {
+      keyEvent("Escape");
       el.blur();
+    };
+    let options = optionNodes().map(optionText);
+    if (
+      !approved &&
+      kind === "combo" &&
+      (!current() || inspect?.signature === signature) &&
+      !options.length &&
+      (!inspect || inspect.signature === signature)
+    ) {
+      try {
+        await openMenu();
+        options = optionNodes().map(optionText);
+      } finally {
+        closeMenu();
+      }
     }
     descriptors.push({
       index: nodes.length,
@@ -197,6 +219,8 @@ export async function formControls(approved = null) {
       options,
       current: current(),
       filled: !!current(),
+      invalid:
+        !!el.closest("[aria-invalid=true]") || !(el.validity?.valid ?? true),
       verified:
         !!current() &&
         kind !== "combo" &&
@@ -214,6 +238,8 @@ export async function formControls(approved = null) {
       optionNodes,
       optionText,
       current,
+      openMenu,
+      closeMenu,
     });
   }
   if (!approved) {
@@ -224,14 +250,42 @@ export async function formControls(approved = null) {
         .filter(visible)
         .map((el) => el.src)
         .filter((url) => /^https?:/.test(url)),
-      uploads: [...document.querySelectorAll("input[type=file]")].map((el) => ({
-        label: label(el) || "Résumé / attachment",
-        filename: el.files?.[0]?.name || "",
-        accepted:
-          !!el.files?.length &&
-          el.getAttribute("aria-invalid") !== "true" &&
-          el.validity.valid,
-      })),
+      uploads: [...document.querySelectorAll("input[type=file]")].map(
+        (el, index) => {
+          const rawLabel = label(el) || "Résumé / attachment";
+          const ids =
+            `${el.getAttribute("aria-errormessage") || ""} ${el.getAttribute("aria-describedby") || ""}`
+              .trim()
+              .split(/\s+/);
+          const errors = ids
+            .map((id) => document.getElementById(id))
+            .filter(
+              (node) =>
+                node &&
+                (el.getAttribute("aria-invalid") === "true" ||
+                  node.matches("[role=alert],[aria-live=assertive]") ||
+                  /error/i.test(node.className)),
+            )
+            .map(text)
+            .filter(Boolean);
+          if (el.getAttribute("aria-invalid") === "true" && !errors.length)
+            errors.push("The employer marked this upload invalid.");
+          return {
+            label: rawLabel.replace(/\s*\*\s*$/, ""),
+            inputId: el.id || "",
+            inputName: el.name || "",
+            inputIndex: index,
+            required:
+              el.required ||
+              el.getAttribute("aria-required") === "true" ||
+              /\*\s*$/.test(rawLabel),
+            accept: el.accept || "",
+            filename: el.files?.[0]?.name || "",
+            errors,
+            accepted: !!el.files?.length && !errors.length && el.validity.valid,
+          };
+        },
+      ),
       title: document.title,
     };
   }
@@ -250,7 +304,7 @@ export async function formControls(approved = null) {
       fail("Field changed since preview. Rescan; your edits were preserved.");
       continue;
     }
-    const { el, kind, optionNodes, optionText } = node;
+    const { el, kind, optionNodes, optionText, openMenu, closeMenu } = node;
     try {
       if (kind === "text") {
         if (node.current()) {
@@ -277,8 +331,31 @@ export async function formControls(approved = null) {
           continue;
         }
         if (kind === "combo") {
-          el.click();
-          for (let wait = 0; wait < 12 && !optionNodes().length; wait++)
+          await openMenu();
+        }
+        if (
+          kind === "combo" &&
+          !optionNodes().some(
+            (option) =>
+              normalize(optionText(option)) === normalize(request.option),
+          ) &&
+          el.tagName === "INPUT" &&
+          !el.readOnly
+        ) {
+          Object.getOwnPropertyDescriptor(
+            HTMLInputElement.prototype,
+            "value",
+          ).set.call(el, request.option);
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          for (
+            let wait = 0;
+            wait < 15 &&
+            !optionNodes().some(
+              (option) =>
+                normalize(optionText(option)) === normalize(request.option),
+            );
+            wait++
+          )
             await new Promise((resolve) => setTimeout(resolve, 100));
         }
         const options = optionNodes().filter(
@@ -300,23 +377,41 @@ export async function formControls(approved = null) {
           el.dispatchEvent(new Event("change", { bubbles: true }));
         } else if (kind === "combo" || !option.checked) option.click();
       }
+      el.blur();
       await new Promise((resolve) => setTimeout(resolve, 400));
       const retained = node.current();
       const expected = kind === "text" ? request.value : request.option;
       let ok =
         el.isConnected &&
-        el.getAttribute("aria-invalid") !== "true" &&
+        !el.closest("[aria-invalid=true]") &&
         (el.validity?.valid ?? true);
       if (kind === "combo") {
-        // Typed text alone is never proof of a committed autocomplete selection.
-        const selected = optionNodes().some(
-          (o) =>
-            normalize(optionText(o)) === normalize(expected) &&
-            o.getAttribute("aria-selected") === "true",
-        );
-        ok &&=
-          normalize(retained) === normalize(expected) &&
-          (selected || el.getAttribute("aria-expanded") === "false");
+        // Eightfold must expose the committed choice again after blur, not just query text.
+        if (/(^|\.)eightfold\.ai$/i.test(document.location.hostname)) {
+          await openMenu();
+          const selected = optionNodes().filter(
+            (o) =>
+              normalize(optionText(o)) === normalize(expected) &&
+              (o.getAttribute("aria-selected") === "true" ||
+                o.getAttribute("aria-checked") === "true"),
+          );
+          closeMenu();
+          await new Promise((resolve) => setTimeout(resolve, 350));
+          ok &&=
+            selected.length === 1 &&
+            !!node.current() &&
+            !el.closest("[aria-invalid=true]") &&
+            (el.validity?.valid ?? true);
+        } else {
+          const selected = optionNodes().some(
+            (o) =>
+              normalize(optionText(o)) === normalize(expected) &&
+              o.getAttribute("aria-selected") === "true",
+          );
+          ok &&=
+            normalize(retained) === normalize(expected) &&
+            (selected || el.getAttribute("aria-expanded") === "false");
+        }
       } else if (kind === "checkbox" || kind === "radio")
         ok &&= node.members.some(
           (o) =>
@@ -331,8 +426,11 @@ export async function formControls(approved = null) {
         index: request.index,
         ok,
         reason: ok
-          ? "Read back and verified."
-          : "The form did not retain a valid, committed value. Retry or complete on the form.",
+          ? "Read back and verified after blur."
+          : kind === "combo" &&
+              /(^|\.)eightfold\.ai$/i.test(document.location.hostname)
+            ? "Eightfold did not expose a committed selection after blur. Retry this field or select and verify it on the form."
+            : "The form did not retain a valid, committed value after blur. Retry this field or complete on the form.",
         value: retained,
       });
     } catch {

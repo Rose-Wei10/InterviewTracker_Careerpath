@@ -18,3 +18,9 @@ No real employer field was filled and no application was submitted during this u
 Custom controls must expose a stable accessible question and a uniquely matching option, and must expose a read-back commitment signal. The extension fails closed when those signals are missing. Multiple checkbox answers, closed shadow roots, inaccessible frames, virtualized options that never appear and upload server status remain manual. Completed entries reflect the last scan/fill read-back; rescan after editing the form.
 
 Live inspection scope was later narrowed at the user’s request: Workday and iCIMS remain synthetic-only. Testing was stopped when requested; documentation updates do not imply another test run.
+
+## November 12 observations and follow-up
+
+The user reported a Viam Greenhouse run with 43 loaded answers, 13 detected fields, 11 matches and six contact/profile values filled and read back. Menus without exposed options remained in review. The user also reported successful receipts and Careerpath records for Viam, C3 AI, Netflix and DoorDash; Siemens remains pending user-created credentials. These are user-provided observations, not a new extension verification run. Complete scan/fill results were not established for the other providers merely by invoking Scan.
+
+v2.1 adds targeted menu retries, keyboard menu inspection, explicit GPA brackets, application-only overrides, clearer upload diagnostics and observed LinkedIn-link retention. Eightfold requires an exposed committed selection after blur; translated wording must be chosen explicitly. Missing graduation options and narrower identity choices remain in review rather than being inferred. The new regression cases and live-provider behavior have **not been executed or reverified** because testing remains paused. No application records, credentials, uploads or employer forms were changed as part of this follow-up.

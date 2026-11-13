@@ -24,3 +24,14 @@ Native selects, radio/checkbox groups and accessible custom comboboxes are suppo
 - `node extensions/apply-kit/browser-check.mjs`: real unpacked extension in an isolated Chrome profile, synthetic multi-frame application, native choice fill/read-back, review exclusions, session restore, navigation, narrow/wide layout and dark theme. Test-only local-host permissions are added to a temporary copy; no employer receives data.
 
 Live preview inspection is distinct from successful live autofill. See `VERIFICATION.md` for the current provider coverage and limitations. No application is submitted by the extension.
+
+## November 12 follow-up (v2.1)
+
+- Empty accessible menus use click plus keyboard opening; **Retry this field** refreshes one document while inspecting only the affected menu. It does not click an option during scanning. If a site does not expose its choices, manual entry remains available.
+- GPA numbers can match explicit numeric brackets (for example, `3.81` → `3.75+`). Ambiguous/overlapping ranges remain unmatched. Broad demographic answers are never narrowed automatically.
+- **Application-only answer / option** lets you enter a one-off answer or choose an exact displayed option, including translated labels. Click **Use for this application**, then individually approve filling it. The source is labeled as an override; saved Apply Kit answers are unchanged. Graduation dates are never rounded to a nearby choice automatically.
+- Eightfold filters using the approved displayed option when necessary, clicks the option, blurs, reopens the menu and requires the selected option to be exposed again without an invalid required state. Typed query text alone is not a verified selection. Missing commitment signals fail into review.
+- Upload guidance separates input ID/name, required status, native filename, accepted file types and exposed error messages. Native file inputs may reset after upload; inspect the employer’s file preview if the native filename is no longer exposed. Server upload success is still confirmed on the employer page.
+- To retain a LinkedIn job URL, open the panel on that LinkedIn `/jobs/view/...` page before following Apply. The observed link is kept for that tab and inherited by a newly opened tab with a known opener. Keep the original link correct in the application-record section. Redirects that happened before the extension observed the source cannot be reconstructed; paste the original URL manually in that case.
+
+Regression cases were added for these changes, but have **not been run** while testing is paused. Earlier verification does not certify v2.1.

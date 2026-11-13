@@ -45,13 +45,15 @@ Text fields, native selects, radio/checkbox groups and accessible custom dropdow
 
 Permitted iframe documents can be scanned, including accessible Greenhouse and Ashby embeds. Cross-origin embeds require the panel’s explicit **Allow access to embedded application** grant. Browser restrictions, inaccessible option lists and controls without a reliable commitment signal still need manual entry. This is not a claim of universal ATS compatibility.
 
+Use **Retry this field** when a menu did not expose its choices. GPA values can map to explicit brackets, while **Application-only answer / option** supports one-off employer choices and translated labels without changing saved answers. Narrower demographic identities and missing graduation dates are never inferred. Eightfold choices require a committed-selection check after blur. Open the panel on the LinkedIn job page before following Apply to retain an observed original link; otherwise paste that link manually.
+
 Manual reminders stay separate from autofill selections. The panel reports a résumé filename and native validation state when available; a selected file does not prove the employer accepted the upload. Confirm its preview or receipt and check for upload errors on the employer form.
 
 Answers and per-tab/page progress remain in Chrome’s session storage across panel closes and page switches. Use **Forget saved session** to clear them; they are not synced or saved in extension local storage. Optional site-access grants persist until removed in Chrome. Only explicitly approved answers are written to an employer page. The extension never clicks Submit. Duplicate checks use the exact original URL, so URL variants may need manual review.
 
 ![Careerpath Apply Kit side panel after filling synthetic fields, showing demographic review, Completed results and fixed scan/fill controls](docs/screenshots/apply-kit-side-panel.png)
 
-The screenshot uses synthetic data from the completed isolated Chrome check. See the [extension guide](extensions/apply-kit/README.md) for setup and [provider verification notes](extensions/apply-kit/VERIFICATION.md) for live-inspection evidence and manual limitations. The metadata handoff needs the updated Careerpath frontend; reloading the extension does not deploy the app.
+The side-panel screenshot shows the v2.0 synthetic preview. The v2.1 follow-up has not been recaptured while testing is paused. See the [extension guide](extensions/apply-kit/README.md) for setup and [provider verification notes](extensions/apply-kit/VERIFICATION.md) for live-inspection evidence and manual limitations. The metadata handoff needs the updated Careerpath frontend; reloading the extension does not deploy the app.
 
 ## Storage cutover
 
