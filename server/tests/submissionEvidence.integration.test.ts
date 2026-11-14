@@ -81,6 +81,9 @@ test("submission evidence is transactional, owner scoped and deduplicated withou
       }),
     ).rejects.toThrow();
   } finally {
+    await prisma.jobApplication.deleteMany({
+      where: { userId: { in: [owner, other] } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: [owner, other] } } });
   }
 });

@@ -1,32 +1,30 @@
-# Apply Kit side-panel verification · 2026-11-11
+# Apply Kit v2.2 verification
 
-No real employer field was filled and no application was submitted during this update. All write tests used synthetic data in an isolated Chrome profile. No paid service or AI provider was added.
+Testing resumed with explicit user authorization to finish, merge and push. All write journeys use synthetic answers and a disposable database or isolated Chrome profile. No real employer application was filled/submitted, and no mailbox setting or existing application record was changed during this verification.
 
-| Workflow / provider | Evidence | Remaining manual work |
+## Completed checks
+
+- ESLint and client/server/script TypeScript checks passed.
+- Unit/component suite: 65 tests passed, including sender-filter query validation, frame deadlines/partial success/cancellation, safe direct links, open/closed shadow roots, delayed controls, manual legal controls, dates/seasons, work-history warnings and application-only overrides.
+- Disposable PostgreSQL: 30 integration tests passed, including receipt ownership, transactional rollback, concurrent deduplication, rejection of unconfirmed evidence and unchanged application status. Migration-preservation checks passed. No new migration is required by v2.2.
+- Playwright: 17 browser journeys passed, including a confirmed-receipt handoff, fragment removal, explicit confirmation, duplicate lookup and saved timeline readback, plus mobile/tablet/desktop and both themes.
+- Real unpacked extension in an isolated Chrome profile: import, two-document scan, native choices/text, approved fill/read-back, demographic bulk exclusion, close/reopen and navigation passed. Layout checked at 320px and 600px and dark theme.
+- Expanded recovery fixture: open shadow field, delayed location choices, ISO date filling, explicit graduation-season review, work-history warnings, changed-frame prompt/rescan, manual legal acknowledgment, submission-in-progress gate and confirmed receipt handoff passed.
+
+The expanded journey caught a general Start date answer being offered for an employment-history start date. The matcher now uses fieldset context to keep availability separate from parsed work-history dates. A regression covers both contexts. The evidence test cleanup was corrected to remove synthetic applications before their users.
+
+The extension browser check adds local HTTP host access only to a temporary test copy; shipped permissions remain active-tab plus optional explicit iframe grants. It tests the real extension panel document; it does not claim complete automation of Chrome’s native side-panel resizing UI.
+
+## Provider evidence and limits
+
+| Provider | Existing evidence | Remaining manual / unverified behavior |
 | --- | --- | --- |
-| Real unpacked extension | Imported synthetic bundle; all-frame scan; native select, text and iframe writes; verified 3 values; demographic excluded from bulk selection; close/reopen restored session; navigation required a new scan. Screens checked at 320 and 600px and dark theme. | Chrome controls panel resizing; site grants are explicit. |
-| PayPal Eightfold | Read-only live inspection confirmed aria-controlled comboboxes, separate country-code field, checkbox demographic group with an aria-labelledby question, and legal consent checkboxes. Synthetic tests cover exact options, group isolation and delayed choices. | Live filling is not verified. Closed/inaccessible menus, date pickers and unsupported commitment signals require manual completion. |
-| Greenhouse | Read-only Figma application inspection confirmed contact text inputs, custom comboboxes, textarea answers and upload input. Local real-Chrome multi-frame scan/fill succeeds with an explicit test-host grant. | Live cross-origin extension grant/fill is not verified. Missing listbox relationships or sandbox restrictions require manual completion / standalone application. |
-| Ashby | After explicit approval, read-only inspection of Skydio confirmed an embedded jobs.ashbyhq.com application with contact inputs, uploads, checkbox availability choices and fieldset-grouped demographic radios. Synthetic iframe and choice tests cover the shared scanner. | Live extension filling is not verified; inaccessible options or frames remain manual. |
-| Workday | Synthetic native / ARIA choice controls and repeated Yes/No groups. | Available live tab was a signed-in Candidate Home; automatic approval review blocked its broader account scope. A specific application URL is needed. No live fill claim. |
-| iCIMS | Synthetic native / ARIA controls, delayed choices and stale-field handling. | No live iCIMS application URL was available. No live verification claim. |
-| Uploads | Native filename and invalid state are tested, including a rejected synthetic file state. | Upload on employer form. Native FileList does not prove server acceptance; verify employer preview, errors and receipt manually. |
-| Submission handoff | Explicit confirmation gate; company/role/location/date and original URL prefill Careerpath's existing duplicate-check/add/edit flow. | User must see an employer receipt, confirm it and save the Careerpath form. Exact-URL duplicate checks do not canonicalize URL variants. |
+| PayPal / Netflix Eightfold | Prior read-only inspection and user observations establish custom comboboxes and translated choices. Synthetic tests cover displayed options and strict post-blur commitment. | Current live filling is not verified. Missing commitment signals and inaccessible/virtualized choices fail into review. |
+| Greenhouse | Prior Figma inspection and user-reported Viam receipt; synthetic multi-document scanning and filling passed. | Live cross-origin extension grants/filling are not reverified. Sandbox restrictions and inaccessible option lists remain manual. |
+| Ashby | Prior approved Skydio wrapper/embedded-form metadata inspection; synthetic iframe and grouped controls covered. | No new live filling claim. |
+| Workday | Synthetic native/ARIA controls, search commitment and native-date behavior. | No specific live application was verified; segmented/custom date controls remain manual. |
+| iCIMS | Shared synthetic native/ARIA control coverage. | No live provider application was verified. |
 
-`npx vitest run extensions/apply-kit` covers exact options and explicit equivalents, dialing code versus postal/residence fields, stale/manual changes, replaced elements, invalid values, delayed/uncommitted autocomplete, uploads, review/bulk separation and session saves.
+A selected filename does not prove upload-server acceptance. Verify the employer’s preview/errors. Closed shadow roots, native-accessibility-only widgets and multiple checkbox answers remain manual. Seasonal graduation mappings require explicit employer month definitions and matching years; no graduation or eligibility date is invented. Completed means the last successful read-back, not a submission receipt.
 
-Custom controls must expose a stable accessible question and a uniquely matching option, and must expose a read-back commitment signal. The extension fails closed when those signals are missing. Multiple checkbox answers, closed shadow roots, inaccessible frames, virtualized options that never appear and upload server status remain manual. Completed entries reflect the last scan/fill read-back; rescan after editing the form.
-
-Live inspection scope was later narrowed at the user’s request: Workday and iCIMS remain synthetic-only. Testing was stopped when requested; documentation updates do not imply another test run.
-
-## November 12 observations and follow-up
-
-The user reported a Viam Greenhouse run with 43 loaded answers, 13 detected fields, 11 matches and six contact/profile values filled and read back. Menus without exposed options remained in review. The user also reported successful receipts and Careerpath records for Viam, C3 AI, Netflix and DoorDash; Siemens remains pending user-created credentials. These are user-provided observations, not a new extension verification run. Complete scan/fill results were not established for the other providers merely by invoking Scan.
-
-v2.1 adds targeted menu retries, keyboard menu inspection, explicit GPA brackets, application-only overrides, clearer upload diagnostics and observed LinkedIn-link retention. Eightfold requires an exposed committed selection after blur; translated wording must be chosen explicitly. Missing graduation options and narrower identity choices remain in review rather than being inferred. The new regression cases and live-provider behavior have **not been executed or reverified** because testing remains paused. No application records, credentials, uploads or employer forms were changed as part of this follow-up.
-
-## Recovery/evidence branch — v2.2, November 13
-
-Source implementation and regression cases now cover bounded frame orchestration, run-scoped cancellation, single-field retry deadlines, safe provider links, open shadow roots, changed-form prompts, native dates, explicit season definitions, work-history warnings and manual legal controls. Receipt handoff, owner validation, transactional activity recording and evidence deduplication are implemented without a database migration. Gmail now has exact-sender filter setup guidance; the classifier, scopes and manual sync behavior are unchanged.
-
-**Not run:** new unit/component tests, typechecks, lint, builds, database integration, synthetic extension journeys, live provider compatibility or the new preview fixture. These remain gated by the user’s paused-testing instruction. No new live submission evidence is claimed. No production deployment, mailbox configuration or existing application record was changed.
+Original links can be retained only if observed or explicitly provided; URL variants can still evade exact-link duplicate lookup. Receipt excerpts are user-confirmed text, not cryptographically verified employer receipts. Hosted CI/deployment status is checked separately after pushing and is not implied by local success.

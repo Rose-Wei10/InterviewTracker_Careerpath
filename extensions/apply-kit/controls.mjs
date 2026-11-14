@@ -266,6 +266,7 @@ export async function formControls(approved = null, inspect = null) {
       label: question,
       manualReason,
       context: [
+        text(el.closest("fieldset")?.querySelector("legend")),
         question,
         ...(el.getAttribute("aria-describedby") || "")
           .split(/\s+/)

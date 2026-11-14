@@ -34,11 +34,11 @@ Live preview inspection is distinct from successful live autofill. See `VERIFICA
 - Upload guidance separates input ID/name, required status, native filename, accepted file types and exposed error messages. Native file inputs may reset after upload; inspect the employer’s file preview if the native filename is no longer exposed. Server upload success is still confirmed on the employer page.
 - To retain a LinkedIn job URL, open the panel on that LinkedIn `/jobs/view/...` page before following Apply. The observed link is kept for that tab and inherited by a newly opened tab with a known opener. Keep the original link correct in the application-record section. Redirects that happened before the extension observed the source cannot be reconstructed; paste the original URL manually in that case.
 
-Regression cases were added for these changes, but have **not been run** while testing is paused. Earlier verification does not certify v2.1.
+The follow-up regression cases are now included in the verified v2.2 suite. Live provider filling remains unverified.
 
 ## Recovery and evidence update (v2.2)
 
-This update is implemented locally but **not yet verified**. Testing remains paused; do not treat the earlier v2.0 browser results as validation of this version.
+Testing resumed with explicit authorization. v2.2 passes lint, client/server typechecks, builds, unit/component checks, disposable-database integration and synthetic browser journeys. See `VERIFICATION.md` for coverage and provider limits.
 
 - Scans discover permitted documents, process at most two at a time, and budget 10 seconds per document / 30 seconds overall. Frame progress distinguishes waiting, scanning, completed, timed out and inaccessible. Successful partial results remain available. A browser-blocked injection can time out without yielding partial fields from that document.
 - New scans, navigation and tab changes invalidate old results. Menu loops check run identity/deadlines; Chrome cannot forcibly abort every outstanding injection, so late results are discarded and cooperative cancellation is used. Single-field retries have the same 10-second budget.
@@ -49,4 +49,6 @@ This update is implemented locally but **not yet verified**. Testing remains pau
 - Submission status is separate from field completion: Not confirmed, Submission in progress, Confirmed submitted, Failed / unknown. Only a user-confirmed receipt or explicit employer success enables the record handoff. No Submit button is clicked by the extension.
 - Receipt evidence is a user-confirmed excerpt (500 characters maximum), time and source URL. The handoff uses a URL fragment rather than query parameters for receipt text. Careerpath removes the parsed fragment and requires confirmation again before saving evidence with the application transaction. An optional owned Careerpath email reference can be entered in the receipt form. Evidence is owner-scoped and deduplicated within an application. No screenshots or full email bodies are saved.
 
-`fixtures/recovery.html` is a reviewable synthetic preview source with an open shadow input, delayed location menu, date, employer-defined seasons, duplicate employment fragments and a delayed iframe. It has no employer endpoint or working submission action. It has not been served or exercised during the paused-testing period. Use a local HTTP origin when preview/testing resumes; file URLs are outside the extension’s default scope.
+`fixtures/recovery.html` is a reviewable synthetic preview source with an open shadow input, delayed location menu, date, employer-defined seasons, duplicate employment fragments and a delayed iframe. It has no employer endpoint or working submission action. It is exercised by the isolated real-Chrome journey, including shadow inputs, delayed menus, native dates, season review, employment warnings, dynamic-frame detection and receipt handoff. Use a local HTTP origin for manual previews; file URLs are outside the extension’s default scope.
+
+Availability dates are not automatically suggested for parsed employment start/end dates. Review those dates for the particular job entry, or explicitly provide an application-only answer.

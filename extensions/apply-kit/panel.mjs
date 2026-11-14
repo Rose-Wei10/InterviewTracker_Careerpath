@@ -131,7 +131,9 @@ function render() {
         ? "Authorization"
         : /school|degree|graduat|gpa|education/i.test(field.label)
           ? "Education"
-          : /employer|employment|job title|current role/i.test(field.label)
+          : /employer|employment|work history|work experience|job title|current role/i.test(
+                `${field.context || ""} ${field.label}`,
+              )
             ? "Work history"
             : /name|email|phone|country|address|city|linkedin|portfolio|github/i.test(
                   field.label,

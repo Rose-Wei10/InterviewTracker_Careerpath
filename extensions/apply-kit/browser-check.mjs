@@ -14,9 +14,19 @@ const manifest = JSON.parse(
 manifest.host_permissions = ["http://127.0.0.1/*"];
 await writeFile(join(extension, "manifest.json"), JSON.stringify(manifest));
 const fixture = `<!doctype html><title>Synthetic application</title><form><label>Given name<input></label><label>Country<select><option value="">Choose</option><option>United States</option></select></label><fieldset><legend>Race</legend><label><input type="radio" name="race">Asian</label><label><input type="radio" name="race">White</label></fieldset><iframe src="/frame"></iframe><label>Résumé<input type="file"></label><button>Submit</button></form>`;
+const recovery = await readFile(
+  new URL("./fixtures/recovery.html", import.meta.url),
+  "utf8",
+);
 const server = createServer((req, res) => {
   res.setHeader("content-type", "text/html");
-  res.end(req.url === "/frame" ? "<label>Last name<input></label>" : fixture);
+  res.end(
+    req.url === "/recovery"
+      ? recovery
+      : req.url === "/frame"
+        ? "<label>Last name<input></label>"
+        : fixture,
+  );
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 let context;
@@ -106,8 +116,126 @@ try {
     await restored.locator("#count").textContent(),
     "0 fields will be filled",
   );
+  // Exercise the recovery-specific controls in the real unpacked extension.
+  await employer.goto(`http://127.0.0.1:${server.address().port}/recovery`);
+  await restored.locator("#replace").click();
+  await restored.locator("#bundle").fill(
+    JSON.stringify({
+      format: "careerpath-apply-kit",
+      version: 1,
+      careerpathOrigin: `http://127.0.0.1:${server.address().port}`,
+      entries: [
+        ...entries,
+        {
+          starterKey: null,
+          prompt: "School location",
+          answer: "Synthetic City",
+          review: false,
+        },
+        {
+          starterKey: null,
+          prompt: "Start date",
+          answer: "2026-11-13",
+          review: false,
+        },
+        {
+          starterKey: "graduation",
+          prompt: "Graduation",
+          answer: "January 2028",
+          review: false,
+        },
+      ],
+    }),
+  );
+  await restored.locator("#scan").click();
+  await restored.getByText(/Scan complete|Partial scan finished/).waitFor();
+
+  assert.equal(
+    await restored.locator("#fields > details > summary").first().textContent(),
+    "Ready to fill (4)",
+  );
+  await restored.getByText(/Possible duplicate employment fragments/).waitFor();
+  const graduation = restored
+    .locator("article")
+    .filter({ has: restored.getByText("Graduation", { exact: true }) });
+  assert((await graduation.textContent()).includes("Spring 2028"));
+  assert(
+    (await graduation.textContent()).includes(
+      "Employer definition: Spring means Jan through March",
+    ),
+  );
+  await restored.locator("#select-ready").click();
+  assert.equal(
+    await restored.locator("#count").textContent(),
+    "4 fields will be filled",
+  );
+  await restored.locator("#fill").click();
+  await restored.getByText(/Fill finished/).waitFor();
+  assert.equal(
+    await employer.locator("input[type=date]").first().inputValue(),
+    "2026-11-13",
+  );
+  assert.equal(
+    await employer.locator("#location").inputValue(),
+    "Synthetic City",
+  );
+  assert.equal(
+    await employer.locator("#shadow").locator("input").inputValue(),
+    "Example",
+  );
+  assert.equal(
+    await employer
+      .locator("label")
+      .filter({ hasText: "legal terms" })
+      .locator("input")
+      .isChecked(),
+    false,
+  );
+  assert.equal(await employer.locator("select").inputValue(), "");
+  await employer.locator("#load-frame").click();
+  await restored
+    .locator("#status")
+    .filter({ hasText: "Form changed" })
+    .waitFor({ timeout: 10000 });
+  await restored.locator("#scan").click();
+  await restored.getByText(/Scan complete|Partial scan finished/).waitFor();
+  assert.equal(await restored.locator("#scan").isEnabled(), true);
+  await restored.locator("#track > summary").click();
+  await restored
+    .locator("#submission-status")
+    .selectOption("Submission in progress");
+  assert.equal(await restored.locator("#record").isDisabled(), true);
+  await restored
+    .locator("#receipt-excerpt")
+    .fill("Synthetic employer receipt: application received.");
+  await restored
+    .locator("#receipt-url")
+    .fill(`http://127.0.0.1:${server.address().port}/receipt`);
+  await restored.locator("#confirmed").check();
+  assert.equal(
+    await restored.locator("#submission-status").inputValue(),
+    "Confirmed submitted",
+  );
+  await restored.evaluate(() => {
+    document.querySelector("main").scrollTop = 0;
+  });
+  await restored.screenshot({ path: join(dir, "panel-recovery.png") });
+  const opened = context.waitForEvent("page");
+  await restored.locator("#record").click();
+  const handoff = await opened;
+  await handoff.waitForURL("**/applications?**");
+  const handed = new URL(handoff.url());
+  assert.equal(
+    handed.searchParams.get("recordLink"),
+    `http://127.0.0.1:${server.address().port}/recovery`,
+  );
+  assert.equal(
+    JSON.parse(new URLSearchParams(handed.hash.slice(1)).get("receipt"))
+      .excerpt,
+    "Synthetic employer receipt: application received.",
+  );
   console.log(
-    `PASS: real unpacked extension import, all-frame scan, exact native choices, demographic review, read-back, close/reopen, navigation, 320/600px and dark theme. Screenshots: ${dir}`,
+    `PASS: real unpacked extension import, all-frame scan, exact native choices, demographic review, read-back, close/reopen, navigation, 320/600px, dark theme, shadow controls, delayed menu, dates, seasons, employment warnings, delayed frame detection and receipt handoff. Screenshots: ${dir}`,
   );
 } finally {
   await context?.close();

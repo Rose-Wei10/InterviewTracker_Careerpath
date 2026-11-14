@@ -496,3 +496,21 @@ test("employment warnings identify duplicate fragments and inconsistent current-
   ).toEqual(before);
   w.close();
 });
+
+test("availability start dates are not suggested for parsed employment history dates", () => {
+  const entries = [
+    {
+      starterKey: "start",
+      prompt: "Start date",
+      answer: "2026-11-13",
+      review: false,
+    },
+  ];
+  expect(
+    suggestions(
+      { label: "Start date", context: "Employment Start date" },
+      entries,
+    ),
+  ).toEqual({ choices: [], suggested: null });
+  expect(suggestions({ label: "Start date" }, entries).suggested).toBe(0);
+});

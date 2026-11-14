@@ -79,6 +79,11 @@ export function isDialingCode(field) {
 
 export function suggestions(field, entries) {
   const label = normalize(field.label);
+  if (
+    /^(start|end|from|to) date$/.test(label) &&
+    /\b(employment|work history|work experience)\b/i.test(field.context || "")
+  )
+    return { choices: [], suggested: null };
   if (isDialingCode(field)) {
     const choices = entries.flatMap((entry, index) =>
       entry.starterKey === "phone-country-code" &&

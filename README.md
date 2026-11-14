@@ -45,7 +45,7 @@ Text fields, native selects, radio/checkbox groups and accessible custom dropdow
 
 Permitted iframe documents can be scanned, including accessible Greenhouse and Ashby embeds. Cross-origin embeds require the panel’s explicit **Allow access to embedded application** grant. Browser restrictions, inaccessible option lists and controls without a reliable commitment signal still need manual entry. This is not a claim of universal ATS compatibility.
 
-Use **Retry this field** when a menu did not expose its choices. GPA values can map to explicit brackets, while **Application-only answer / option** supports one-off employer choices and translated labels without changing saved answers. Narrower demographic identities and missing graduation dates are never inferred. Eightfold choices require a committed-selection check after blur. Open the panel on the LinkedIn job page before following Apply to retain an observed original link; otherwise paste that link manually.
+Use **Retry this field** when a menu did not expose its choices. General availability dates are kept separate from parsed employment dates. GPA values can map to explicit brackets, while **Application-only answer / option** supports one-off employer choices and translated labels without changing saved answers. Narrower demographic identities and missing graduation dates are never inferred. Eightfold choices require a committed-selection check after blur. Open the panel on the LinkedIn job page before following Apply to retain an observed original link; otherwise paste that link manually.
 
 Manual reminders stay separate from autofill selections. The panel reports a résumé filename and native validation state when available; a selected file does not prove the employer accepted the upload. Confirm its preview or receipt and check for upload errors on the employer form.
 
@@ -53,7 +53,7 @@ Answers and per-tab/page progress remain in Chrome’s session storage across pa
 
 ![Careerpath Apply Kit side panel after filling synthetic fields, showing demographic review, Completed results and fixed scan/fill controls](docs/screenshots/apply-kit-side-panel.png)
 
-The side-panel screenshot shows the v2.0 synthetic preview. The v2.1 follow-up has not been recaptured while testing is paused. See the [extension guide](extensions/apply-kit/README.md) for setup and [provider verification notes](extensions/apply-kit/VERIFICATION.md) for live-inspection evidence and manual limitations. The metadata handoff needs the updated Careerpath frontend; reloading the extension does not deploy the app.
+The side-panel screenshot shows the v2.2 isolated Chrome preview using synthetic data. See the [extension guide](extensions/apply-kit/README.md) for setup and [provider verification notes](extensions/apply-kit/VERIFICATION.md) for live-inspection evidence and manual limitations. The metadata handoff needs the updated Careerpath frontend; reloading the extension does not deploy the app.
 
 ### Apply Kit recovery and receipt evidence (v2.2)
 
@@ -63,7 +63,7 @@ Topic sections organize the three status groups. Passwords and legal acknowledgm
 
 Submission state is independent of filled fields. After an actual employer receipt, the extension can hand a short confirmed excerpt, source and time to Careerpath. The add/edit form requires confirmation again. The API validates ownership, saves evidence transactionally in the activity timeline and deduplicates evidence within an application; an owned email reference is also supported. No new database table is needed. A Submit click, disabled button or vanishing form is never sufficient proof.
 
-This version is **locally implemented, not release-verified**. Tests remain paused. The [synthetic preview source](extensions/apply-kit/fixtures/recovery.html) and new regression cases are available for the next verification pass; the existing side-panel screenshot predates v2.2. Nothing has been deployed by this update.
+The v2.2 checks cover lint, types, builds, unit/component tests, disposable-database integration, browser journeys and the isolated unpacked extension. The [synthetic preview source](extensions/apply-kit/fixtures/recovery.html) is exercised by the extension journey. This verifies local behavior, not universal live ATS compatibility or hosted deployment. See [verification details](extensions/apply-kit/VERIFICATION.md).
 
 ## Storage cutover
 
