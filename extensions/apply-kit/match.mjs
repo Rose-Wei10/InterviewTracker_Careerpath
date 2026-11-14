@@ -176,15 +176,73 @@ export function suggestions(field, entries) {
 export function needsReview(field, entry) {
   return (
     entry?.review ||
+    !!(entry && graduationSeason(field, entry.answer || "")) ||
     /\b(salary|compensation|pay|wage|eligib\w*|consent|agree|acknowledg\w*|certif\w*|conflict\w*|government official|previous employee|referral|business interest|competes?|related to|relationship|sponsor\w*|visa|work authori[sz]\w*|eligible to work|legally authori[sz]\w*|why\s+(?:do|are|would|this|our)|motivation)\b/i.test(
       `${field.label} ${entry?.prompt || ""}`,
     )
   );
 }
 
+export function graduationSeason(field, answer) {
+  if (!/graduat/i.test(field.label)) return null;
+  const months = [
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+  ];
+  const date = answer.trim().match(/^([a-z]+)\s+(\d{4})$/i);
+  if (!date) return null;
+  const month = months.findIndex((value) => value === date[1].toLowerCase());
+  if (month < 0) return null;
+  const context = field.context || field.label;
+  const definitions = [
+    ...context.matchAll(
+      /\b(spring|summer|fall|autumn|winter)\s*(?:[:(=]|is|means)\s*([a-z]+)\s*(?:[-–—]|to|through)\s*([a-z]+)/gi,
+    ),
+  ].flatMap((match) => {
+    const first = months.findIndex((value) =>
+      value.startsWith(match[2].toLowerCase()),
+    );
+    const last = months.findIndex((value) =>
+      value.startsWith(match[3].toLowerCase()),
+    );
+    return first >= 0 && last >= first && month >= first && month <= last
+      ? [{ season: match[1], definition: match[0] }]
+      : [];
+  });
+  const matches = (field.options || []).flatMap((option) =>
+    definitions
+      .filter(
+        (item) => normalize(option) === normalize(`${item.season} ${date[2]}`),
+      )
+      .map((item) => ({ option, definition: item.definition })),
+  );
+  return matches.length === 1 ? matches[0] : null;
+}
 // Conservative equivalents: compare only within the question's own option list.
 export function optionMatch(field, answer) {
-  if (field.kind === "text") return answer;
+  if (field.kind === "text") {
+    if (field.inputType === "date") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(answer)) return null;
+      const date = new Date(`${answer}T00:00:00Z`);
+      return Number.isFinite(date.getTime()) &&
+        date.toISOString().slice(0, 10) === answer
+        ? answer
+        : null;
+    }
+    return answer;
+  }
+  const seasonal = graduationSeason(field, answer);
+  if (seasonal) return seasonal.option;
   if (isDialingCode(field)) {
     if (!/^\+[1-9]\d{0,2}$/.test(answer.trim())) return null;
     const matches = (field.options || []).filter(

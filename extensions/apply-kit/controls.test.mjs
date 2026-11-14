@@ -181,8 +181,15 @@ test("side panel imports, previews, keeps manual reminders separate and restores
     { starterKey: null, prompt: "Race", answer: "Asian", review: false },
   ];
   const storage = {};
+  vi.stubGlobal("setInterval", w.setInterval.bind(w));
   const executeScript = vi
     .fn()
+    .mockResolvedValueOnce([
+      {
+        documentId: "doc",
+        result: { url: "https://employer.test/apply", embeds: [], revision: 0 },
+      },
+    ])
     .mockResolvedValueOnce([
       {
         documentId: "doc",
@@ -273,6 +280,12 @@ test("side panel imports, previews, keeps manual reminders separate and restores
   expect($("fields").querySelectorAll("input[type=checkbox]")[1].checked).toBe(
     false,
   );
+  $("submission-status").value = "Submission in progress";
+  $("submission-status").dispatchEvent(new w.Event("change"));
+  expect($("record").disabled).toBe(true);
+  $("submission-status").value = "Confirmed submitted";
+  $("submission-status").dispatchEvent(new w.Event("change"));
+  expect($("record").disabled).toBe(true);
   $("fill").click();
   await vi.waitFor(() =>
     expect($("fields").textContent).toContain("Verified current value: Alex"),
@@ -398,5 +411,88 @@ test("Eightfold query text is not completed unless the selection survives blur a
   expect(
     (await formControls([request(fresh.fields[0], "是", "是")]))[0].ok,
   ).toBe(true);
+  w.close();
+});
+
+test("open shadow controls are discoverable, closed roots stay inaccessible and acknowledgments cannot be filled", async () => {
+  const w = fixture(
+    '<div id="open"></div><div id="closed"></div><label>I agree to the legal terms<input type="checkbox"></label>',
+  );
+  w.document.getElementById("open").attachShadow({ mode: "open" }).innerHTML =
+    '<label for="name">Given name</label><input id="name">';
+  w.document
+    .getElementById("closed")
+    .attachShadow({ mode: "closed" }).innerHTML =
+    "<label>Closed field<input></label>";
+  const scan = await formControls();
+  expect(scan.fields.some((field) => field.label === "Given name")).toBe(true);
+  expect(scan.fields.some((field) => field.label === "Closed field")).toBe(
+    false,
+  );
+  const legal = scan.fields.find((field) =>
+    field.manualReason?.includes("Legal"),
+  );
+  expect(legal).toBeTruthy();
+  expect(
+    (await formControls([request(legal, "Yes", legal.options[0])]))[0].ok,
+  ).toBe(false);
+  w.close();
+});
+
+test("native dates and explicit employer graduation seasons never alter an eligibility date", () => {
+  expect(
+    optionMatch(
+      { kind: "text", inputType: "date", label: "Start date" },
+      "2026-11-13",
+    ),
+  ).toBe("2026-11-13");
+  expect(
+    optionMatch(
+      { kind: "text", inputType: "date", label: "Start date" },
+      "2026-02-30",
+    ),
+  ).toBeNull();
+  const field = {
+    kind: "select",
+    label: "Graduation",
+    context: "Spring is Jan through March",
+    options: ["Spring 2028", "Fall 2027"],
+  };
+  expect(optionMatch(field, "January 2028")).toBe("Spring 2028");
+  expect(
+    needsReview(field, {
+      answer: "January 2028",
+      review: false,
+      prompt: "Graduation",
+    }),
+  ).toBe(true);
+  expect(optionMatch({ ...field, context: "" }, "January 2028")).toBeNull();
+  expect(
+    optionMatch({ ...field, options: ["Spring 2027"] }, "January 2028"),
+  ).toBeNull();
+});
+
+test("employment warnings identify duplicate fragments and inconsistent current-role dates without changing entries", async () => {
+  const w = fixture(
+    '<fieldset><legend>Employment</legend><label>Company<input value="Synthetic Co"></label><label>Job title<input value="Engineer"></label><label>End date<input value="2026-01-01"></label><label>Current role<input type="checkbox" checked></label></fieldset><fieldset><legend>Employment</legend><label>Company<input value="Synthetic Co"></label><label>Job title<input value="Engineer"></label><label>Start date<input required></label></fieldset>',
+  );
+  const before = [...w.document.querySelectorAll("input")].map((el) => [
+    el.value,
+    el.checked,
+  ]);
+  const scan = await formControls();
+  expect(scan.warnings.some((value) => value.includes("duplicate"))).toBe(true);
+  expect(
+    scan.warnings.some((value) => value.includes("missing required")),
+  ).toBe(true);
+  expect(
+    scan.warnings.some((value) => value.includes("current-role flag")),
+  ).toBe(true);
+  expect(
+    [...w.document.querySelectorAll("input")].map((el) => [
+      el.value,
+      el.checked,
+    ]),
+  ).toEqual(before);
   w.close();
 });

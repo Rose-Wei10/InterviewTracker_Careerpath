@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Apply Kit synthetic recovery preview</title>
+  <style>
+    body {
+      font: 16px/1.5 system-ui;
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 20px;
+      color: #201d3a;
+      background: #f5f1ff;
+    }
+    fieldset {
+      margin: 18px 0;
+      padding: 16px;
+    }
+    label {
+      display: block;
+      margin: 12px 0;
+    }
+    input,
+    select,
+    button {
+      font: inherit;
+      padding: 8px;
+    }
+    [role="option"] {
+      padding: 8px;
+      cursor: pointer;
+      background: white;
+    }
+    :focus-visible {
+      outline: 3px solid #5842ae;
+    }
+  </style>
+  <h1>Synthetic application · recovery preview</h1>
+  <p>
+    No employer connection, real profile data or working submission endpoint.
+    Use only synthetic answers.
+  </p>
+  <label>Given name<input autocomplete="given-name" /></label>
+  <div id="shadow"></div>
+  <label
+    >School location<input
+      id="location"
+      role="combobox"
+      aria-controls="locations"
+      aria-expanded="false"
+  /></label>
+  <div id="locations" role="listbox" hidden></div>
+  <label>Start date<input type="date" required /></label>
+  <label
+    >Graduation<select aria-describedby="season">
+      <option value="">Choose</option>
+      <option>Spring 2028</option>
+      <option>Fall 2028</option>
+    </select></label
+  >
+  <p id="season">
+    Spring means Jan through March. Fall means September through November.
+  </p>
+  <fieldset>
+    <legend>Employment</legend>
+    <label>Company<input value="Synthetic Co" /></label
+    ><label>Job title<input value="Engineer" /></label
+    ><label>End date<input type="date" value="2026-01-01" /></label
+    ><label>Current role<input type="checkbox" checked /></label>
+  </fieldset>
+  <fieldset>
+    <legend>Employment</legend>
+    <label>Company<input value="Synthetic Co" /></label
+    ><label>Job title<input value="Engineer" /></label
+    ><label>Start date<input type="date" required /></label>
+  </fieldset>
+  <label
+    >Resume/CV*<input type="file" required aria-describedby="upload-error"
+  /></label>
+  <p id="upload-error" role="alert">
+    Synthetic upload example: no server acceptance is available.
+  </p>
+  <label
+    ><input type="checkbox" />I agree to the legal terms (manual only)</label
+  >
+  <button id="load-frame" type="button">Load a new application iframe</button>
+  <p id="notice" role="status"></p>
+  <script>
+    document.querySelector("#shadow").attachShadow({ mode: "open" }).innerHTML =
+      '<label>Last name<input autocomplete="family-name"></label>';
+    const input = document.querySelector("#location"),
+      list = document.querySelector("#locations");
+    function open() {
+      input.setAttribute("aria-expanded", "true");
+      setTimeout(() => {
+        list.hidden = false;
+        list.replaceChildren();
+        const option = document.createElement("div");
+        option.role = "option";
+        option.textContent = "Synthetic City";
+        option.onclick = () => {
+          input.value = option.textContent;
+          option.setAttribute("aria-selected", "true");
+          input.setAttribute("aria-expanded", "false");
+          list.hidden = true;
+        };
+        list.append(option);
+      }, 200);
+    }
+    input.onclick = open;
+    input.onkeydown = (event) => {
+      if (event.key === "ArrowDown") open();
+      if (event.key === "Escape") {
+        list.hidden = true;
+        input.setAttribute("aria-expanded", "false");
+      }
+    };
+    document.querySelector("#load-frame").onclick = () => {
+      const frame = document.createElement("iframe");
+      frame.title = "Synthetic delayed form";
+      frame.srcdoc =
+        '<label>Email<input type="email" autocomplete="email"></label>';
+      document.body.append(frame);
+      document.querySelector("#notice").textContent =
+        "A new frame was added. The extension should offer rescan; browser permissions may limit srcdoc access.";
+    };
+  </script>
+</html>

@@ -14,7 +14,7 @@ The current workspace shown with synthetic browser-test data.
 
 - **Workspace:** soft pink, lavender and blue gradients in light mode, with a dark theme and responsive layouts. On desktop, the collapse button sits beside the Careerpath logo, the account button sits at the bottom of the sidebar, and a transparent Careerpath breadcrumb replaces the top banner. Navigation and Match history can collapse independently.
 - **Overview:** total applications, interviews, offers and response rate appear first. The application funnel sits beside recent activity on desktop, with weekly/monthly trends and the action center below. The interview count and rate use current application stages. Totals, offers and funnel stages open filtered applications while preserving the analytics date range. Reminders and manual 30-day review stay independent of that range.
-- **Email updates:** manually sync recruiting emails labeled Careerpath in Gmail, review suggested matches and link messages to applications. See [Gmail setup](docs/GMAIL.md).
+- **Email updates:** manually sync recruiting emails labeled Careerpath in Gmail, review suggested matches and link messages to applications. Use the connected-account filter guide to copy an exact-sender or sender-plus-recruiting-phrases search and create the Careerpath label filter yourself in Gmail. Read-only permissions and manual sync remain unchanged. See [Gmail setup](docs/GMAIL.md).
 - **Apply Kit:** save private application details and reusable answers across devices, search by topic or answer, and copy individual responses. Starter questions cover software engineering and mentoring, and you can add your own. Use the [free local Chrome side-panel extension](extensions/apply-kit/README.md) to preview saved answers, select fields to fill, and verify retained values beside an employer’s form.
 - **Applications:** create, edit, detail and delete; company/role search; location/status/date filters; sorting; 10 rows per page; notes, salary, HTTP(S) job links, resume selection and event scheduling; quick status updates, removable filter chips and reset filters. Search remains synchronized with browser history.
 - **CSV:** transactional imports of up to 500 rows and filtered exports of up to 10,000 rows; invalid batches fail without partial imports; formula-leading export cells are escaped.
@@ -54,6 +54,16 @@ Answers and per-tab/page progress remain in Chrome’s session storage across pa
 ![Careerpath Apply Kit side panel after filling synthetic fields, showing demographic review, Completed results and fixed scan/fill controls](docs/screenshots/apply-kit-side-panel.png)
 
 The side-panel screenshot shows the v2.0 synthetic preview. The v2.1 follow-up has not been recaptured while testing is paused. See the [extension guide](extensions/apply-kit/README.md) for setup and [provider verification notes](extensions/apply-kit/VERIFICATION.md) for live-inspection evidence and manual limitations. The metadata handoff needs the updated Careerpath frontend; reloading the extension does not deploy the app.
+
+### Apply Kit recovery and receipt evidence (v2.2)
+
+Scans now expose per-document progress with two concurrent workers, a 10-second document budget and a 30-second overall budget. Partial successful results survive failures. Run-scoped cancellation and bounded field retries prevent stale scans from replacing current work. Open shadow roots and newly loaded forms are discoverable; inaccessible frames, closed roots and native-accessibility-only controls remain manual. Detected Greenhouse/Ashby application URLs can open in a standalone tab while retaining the observed original job link.
+
+Topic sections organize the three status groups. Passwords and legal acknowledgments stay outside autofill. Native dates use ISO values; segmented/custom dates remain manual. Graduation seasons require the employer’s explicit month definition and matching year plus individual review. Structured employment fragments are flagged for review without rewriting résumé data.
+
+Submission state is independent of filled fields. After an actual employer receipt, the extension can hand a short confirmed excerpt, source and time to Careerpath. The add/edit form requires confirmation again. The API validates ownership, saves evidence transactionally in the activity timeline and deduplicates evidence within an application; an owned email reference is also supported. No new database table is needed. A Submit click, disabled button or vanishing form is never sufficient proof.
+
+This version is **locally implemented, not release-verified**. Tests remain paused. The [synthetic preview source](extensions/apply-kit/fixtures/recovery.html) and new regression cases are available for the next verification pass; the existing side-panel screenshot predates v2.2. Nothing has been deployed by this update.
 
 ## Storage cutover
 
@@ -177,6 +187,8 @@ Bearer authentication is required for `/api/*`. Errors use `{message, errors?: [
 | `/api/analyses/config`                          | GET free mode (`rules`) and daily allowance                                                                |
 | `/api/analyses`                                 | GET owned history (optional applicationId); POST PDF or pasted text review                                 |
 | `/api/analyses/:id`                             | GET owned report; DELETE history                                                                           |
+
+Application create/update also accepts optional `submissionEvidence`: explicit `confirmed: true`, `confirmedAt`, an excerpt up to 500 characters, and a source HTTP(S) URL or owned `emailUpdateId`. Evidence alone does not change application status.
 
 Application list/export filters: `search`, `status`, `location`, `from`, `to`, `sort`, `direction`, `page`, `pageSize`. Sort fields are allowlisted. Status strings remain compatible with existing data: Applied, OA, Interview, Final Round, Offer, Reject, Ghosted.
 

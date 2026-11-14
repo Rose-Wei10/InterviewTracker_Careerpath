@@ -35,3 +35,18 @@ Live preview inspection is distinct from successful live autofill. See `VERIFICA
 - To retain a LinkedIn job URL, open the panel on that LinkedIn `/jobs/view/...` page before following Apply. The observed link is kept for that tab and inherited by a newly opened tab with a known opener. Keep the original link correct in the application-record section. Redirects that happened before the extension observed the source cannot be reconstructed; paste the original URL manually in that case.
 
 Regression cases were added for these changes, but have **not been run** while testing is paused. Earlier verification does not certify v2.1.
+
+## Recovery and evidence update (v2.2)
+
+This update is implemented locally but **not yet verified**. Testing remains paused; do not treat the earlier v2.0 browser results as validation of this version.
+
+- Scans discover permitted documents, process at most two at a time, and budget 10 seconds per document / 30 seconds overall. Frame progress distinguishes waiting, scanning, completed, timed out and inaccessible. Successful partial results remain available. A browser-blocked injection can time out without yielding partial fields from that document.
+- New scans, navigation and tab changes invalidate old results. Menu loops check run identity/deadlines; Chrome cannot forcibly abort every outstanding injection, so late results are discarded and cooperative cancellation is used. Single-field retries have the same 10-second budget.
+- Open shadow roots are traversed. A lightweight observer notices newly loaded controls/frames and asks for a rescan. Closed roots and native-accessibility-only widgets remain manual. Grant only the embedded origin you intend to use.
+- **Open embedded application** appears only for detected HTTPS Greenhouse/Ashby application URLs on exact allowed hosts. The new tab receives the observed original job URL. If the extension never saw the original LinkedIn URL, paste it into the record section manually.
+- Status groups retain their counts and contain topic sections. Legal acknowledgments and passwords are not autofilled. Native date inputs use valid ISO dates; custom/segmented date entry remains manual. Employer-defined graduation seasons require an explicit month range and matching year, then individual review; saved graduation is never changed.
+- Duplicate employment fragments, missing required work-history fields and conflicting current-role/end-date states are flagged when structured controls expose them. They are never rewritten automatically.
+- Submission status is separate from field completion: Not confirmed, Submission in progress, Confirmed submitted, Failed / unknown. Only a user-confirmed receipt or explicit employer success enables the record handoff. No Submit button is clicked by the extension.
+- Receipt evidence is a user-confirmed excerpt (500 characters maximum), time and source URL. The handoff uses a URL fragment rather than query parameters for receipt text. Careerpath removes the parsed fragment and requires confirmation again before saving evidence with the application transaction. An optional owned Careerpath email reference can be entered in the receipt form. Evidence is owner-scoped and deduplicated within an application. No screenshots or full email bodies are saved.
+
+`fixtures/recovery.html` is a reviewable synthetic preview source with an open shadow input, delayed location menu, date, employer-defined seasons, duplicate employment fragments and a delayed iframe. It has no employer endpoint or working submission action. It has not been served or exercised during the paused-testing period. Use a local HTTP origin when preview/testing resumes; file URLs are outside the extension’s default scope.
