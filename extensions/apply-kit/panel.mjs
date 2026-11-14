@@ -1,3 +1,4 @@
+import { scanFrames, frameInfo, cancelFrameScan, directForm } from "./scan.mjs";
 import { formControls } from "./controls.mjs";
 import {
   parseBundle,
@@ -5,6 +6,7 @@ import {
   needsReview,
   optionMatch,
   isDialingCode,
+  graduationSeason,
 } from "./match.mjs";
 const $ = (id) => document.getElementById(id);
 let state = {
@@ -29,13 +31,15 @@ const message = (value) => {
   $("status").textContent = value;
 };
 function updateCount() {
-  const selected = rows.filter((row) => row.check.checked);
+  const selected = rows.filter(
+    (row) => row.check.checked && !row.check.disabled,
+  );
   $("available").textContent =
     `${rows.filter((row) => !row.check.disabled).length} fields available to autofill`;
   $("count").textContent = `${selected.length} fields will be filled`;
   $("manual-count").textContent =
     `${$("checklist").querySelectorAll("input:checked").length} manual reminders checked`;
-  $("fill").disabled = !selected.length;
+  $("fill").disabled = !selected.length || $("scan").disabled;
   $("fill-help").textContent = selected.length
     ? "Only these approved fields will be changed."
     : "Select an autofill suggestion. Manual reminders do not select fields.";
@@ -79,6 +83,7 @@ function render() {
   $("fields").replaceChildren();
   $("checklist").replaceChildren();
   if (!page) {
+    $("scan-progress").replaceChildren();
     $("diagnostics").textContent = state.entries.length
       ? "No tab scanned yet."
       : "Autofill data not loaded. No tab scanned yet.";
@@ -88,6 +93,7 @@ function render() {
     updateCount();
     return;
   }
+  if (page.progress) renderProgress(page.progress);
   $("diagnostics").textContent =
     `${state.entries.length} answers loaded. Scanned: ${page.title || ""} ${page.url}. ${page.frames.length} accessible documents; ${page.fields.length} fields detected. ${page.fields.filter((field) => suggestions(field, state.entries).choices.length).length} matched. ${page.embeds.length} iframe(s) detected. Cross-origin frames need explicit permission.`;
   const groups = ["Ready to fill", "Needs review", "Completed"].map((name) => {
@@ -110,6 +116,7 @@ function render() {
     const ready =
       !completed &&
       !field.filled &&
+      !field.manualReason &&
       !!option &&
       !field.demographic &&
       !page.overrides?.[key] &&
@@ -118,8 +125,34 @@ function render() {
     const card = document.createElement("article");
     card.className = "card";
     card.dataset.fieldKey = key;
-    group.append(card);
+    const topic = field.demographic
+      ? "Demographics"
+      : /authoriz|sponsor|visa|eligib/i.test(field.label)
+        ? "Authorization"
+        : /school|degree|graduat|gpa|education/i.test(field.label)
+          ? "Education"
+          : /employer|employment|work history|work experience|job title|current role/i.test(
+                `${field.context || ""} ${field.label}`,
+              )
+            ? "Work history"
+            : /name|email|phone|country|address|city|linkedin|portfolio|github/i.test(
+                  field.label,
+                )
+              ? "Profile"
+              : "Other";
+    let section = [...group.querySelectorAll(":scope > details")].find(
+      (el) => el.dataset.topic === topic,
+    );
+    if (!section) {
+      section = document.createElement("details");
+      section.dataset.topic = topic;
+      section.open = true;
+      text("summary", topic, section);
+      group.append(section);
+    }
+    section.append(card);
     text("strong", field.label, card);
+    if (field.guidance) text("p", field.guidance, card);
     if (completed) {
       text(
         "p",
@@ -138,6 +171,10 @@ function render() {
         const retry = text("button", "Retry this field", card);
         retry.onclick = () => retryField(field);
       }
+      continue;
+    }
+    if (field.manualReason) {
+      text("p", field.manualReason, card);
       continue;
     }
     let selected = page.sources?.[key] ?? suggested;
@@ -320,6 +357,9 @@ function render() {
           ? " I reviewed this demographic answer for this application"
           : " Fill this field";
       check.disabled = !approvedOption;
+      const seasonal = e && graduationSeason(field, e.answer);
+      if (seasonal)
+        exact.textContent += ` · Employer definition: ${seasonal.definition}. Saved graduation date is unchanged; review individually.`;
       copy.disabled = !e;
       updateCount();
     };
@@ -357,9 +397,47 @@ function render() {
   groups.forEach((group) => {
     group.firstChild.textContent += ` (${group.querySelectorAll("article").length})`;
   });
+  for (const url of page.embeds) {
+    const safe = directForm(url);
+    if (!safe) continue;
+    const link = text("a", "Open embedded application", $("fields"));
+    link.href = safe;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.onclick = async (event) => {
+      event.preventDefault();
+      const original = page.originalUrl || page.url;
+      try {
+        const tab = await chrome.tabs.create({
+          url: safe,
+          active: false,
+          openerTabId: page.tabId,
+        });
+        state.jobOrigins ||= {};
+        state.jobOrigins[tab.id] = original;
+        await save();
+        await chrome.tabs.update(tab.id, { active: true });
+      } catch {
+        message(
+          "Could not open the standalone form. Use the employer page or copy the detected link.",
+        );
+      }
+    };
+    text(
+      "p",
+      "If upload fails here, complete it in the standalone form. Confirm the original job link before recording.",
+      $("fields"),
+    );
+  }
+  text(
+    "p",
+    "Closed shadow roots and native-accessibility-only widgets cannot be read by this extension. Complete them on the form, then rescan.",
+    $("fields"),
+  );
   const checklist = $("checklist");
   checklist.hidden = false;
   text("h2", "Manual reminders · not autofill selections", checklist);
+  for (const warning of page.warnings || []) text("p", warning, checklist);
   for (const upload of page.uploads) {
     const item = document.createElement("div");
     checklist.append(item);
@@ -399,33 +477,87 @@ function render() {
     checklist.append(label);
   }
   $("track").hidden = false;
+  $("origin-help").textContent =
+    page.originalUrl && page.originalUrl !== page.url
+      ? "Original job link retained. Verify it before saving."
+      : "No earlier job URL was observed. Paste the original LinkedIn/job link before recording if this is only the employer form URL.";
   $("job-link").value = page.originalUrl || page.url;
   for (const id of ["company", "role", "location", "applied-date"])
     $(id).value =
       page[id] ||
       (id === "applied-date" ? new Date().toLocaleDateString("en-CA") : "");
+  $("submission-status").value = page.submissionStatus || "Not confirmed";
+  $("receipt-excerpt").value = page.receiptExcerpt || "";
+  $("receipt-url").value = page.receiptUrl || page.url;
   $("confirmed").checked = !!page.confirmed;
   $("record").disabled = !page.confirmed;
   updateCount();
 }
+let scanGeneration = 0,
+  scanningTab,
+  scanningRun;
+function cancelScan() {
+  scanGeneration++;
+  if (scanningTab)
+    chrome.scripting
+      .executeScript({
+        target: { tabId: scanningTab, allFrames: true },
+        func: cancelFrameScan,
+        args: [scanningRun],
+      })
+      .catch(() => {});
+  scanningTab = undefined;
+  $("scan").disabled = false;
+}
+function renderProgress(progress) {
+  $("scan-progress").replaceChildren();
+  for (const frame of progress)
+    text(
+      "p",
+      `${frame.url} · ${frame.state}${frame.reason ? " — " + frame.reason : ""}`,
+      $("scan-progress"),
+    );
+}
+
 async function scan() {
+  cancelScan();
+  const generation = scanGeneration;
+  scanningRun = crypto.randomUUID();
   if (!state.entries.length) {
     message("Paste your Careerpath autofill data first.");
     return;
   }
   $("scan").disabled = true;
+  for (const row of rows) row.check.checked = false;
+  if (page) page.selected = {};
+  updateCount();
+  renderProgress([
+    {
+      url: "Active application",
+      state: "scanning",
+      reason: "Discovering permitted documents…",
+    },
+  ]);
   message("Scanning the active application and permitted frames…");
   try {
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     });
+    if (generation !== scanGeneration) return;
     if (!tab?.id || !/^https?:/.test(tab.url || ""))
       throw Error("Open an employer application tab first.");
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id, allFrames: true },
+    scanningTab = tab.id;
+    const { results, progress } = await scanFrames(chrome, {
+      tabId: tab.id,
       func: formControls,
+      runId: scanningRun,
+      isCurrent: () => generation === scanGeneration,
+      onProgress: (items) => {
+        if (generation === scanGeneration) renderProgress(items);
+      },
     });
+    if (generation !== scanGeneration) return;
     rememberOriginal(tab);
     const key = pageKey(tab),
       previous = state.pages[key];
@@ -436,6 +568,8 @@ async function scan() {
       title: tab.title,
       originalUrl:
         previous?.originalUrl || state.jobOrigins?.[tab.id] || tab.url,
+      progress,
+      warnings: results.flatMap((result) => result.result.warnings || []),
       frames: results.map((r) => ({
         documentId: r.documentId,
         frameId: r.frameId,
@@ -446,7 +580,14 @@ async function scan() {
           documentId: r.documentId,
         })),
       ),
-      embeds: results.flatMap((r) => r.result?.frames || []),
+      embeds: [
+        ...new Set([
+          ...results.flatMap((r) => r.result?.frames || []),
+          ...progress
+            .filter((frame) => frame.embedded)
+            .map((frame) => frame.url),
+        ]),
+      ],
       uploads: results.flatMap((r) =>
         (r.result?.uploads || []).map((upload) => ({
           ...upload,
@@ -474,32 +615,68 @@ async function scan() {
     render();
     await save();
     message(
-      "Scan complete. Review exact options before selecting fields. Open closed custom menus and rescan if their choices are not available.",
+      progress.some(
+        (frame) =>
+          frame.state === "timed out" || frame.state === "inaccessible",
+      )
+        ? "Partial scan finished. Available results are preserved; review frame failures above and retry when ready."
+        : "Scan complete. Review exact options before selecting fields. Use Retry this field for missing menu choices.",
     );
   } catch (error) {
+    if (generation !== scanGeneration) return;
     message(
       `${error.message} Click the extension icon on this tab to grant temporary access, then try again.`,
     );
   } finally {
-    $("scan").disabled = false;
+    if (generation === scanGeneration) {
+      $("scan").disabled = false;
+      scanningTab = undefined;
+      updateCount();
+    }
   }
 }
 async function retryField(field) {
   const current = page;
+  cancelScan();
+  const generation = scanGeneration;
+  scanningRun = crypto.randomUUID();
+  scanningTab = current.tabId;
   $("scan").disabled = true;
+  updateCount();
+  let timer;
   message(`Inspecting options for ${field.label}…`);
   try {
     const [tab] = await chrome.tabs.query({
       active: true,
       currentWindow: true,
     });
+    if (generation !== scanGeneration) return;
     if (tab?.id !== current.tabId || tab.url !== current.url)
       throw Error("The page changed. Scan this application first.");
-    const [result] = await chrome.scripting.executeScript({
-      target: { tabId: current.tabId, documentIds: [field.documentId] },
-      func: formControls,
-      args: [null, { signature: field.signature }],
-    });
+    const [result] = await Promise.race([
+      chrome.scripting.executeScript({
+        target: { tabId: current.tabId, documentIds: [field.documentId] },
+        func: formControls,
+        args: [
+          null,
+          {
+            signature: field.signature,
+            runId: scanningRun,
+            deadline: Date.now() + 9750,
+          },
+        ],
+      }),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              Error("This field timed out. Retry or complete it on the form."),
+            ),
+          10000,
+        );
+      }),
+    ]);
+    if (generation !== scanGeneration || page !== current) return;
     const previous = current.fields.filter(
       (item) => item.documentId === field.documentId,
     );
@@ -544,11 +721,16 @@ async function retryField(field) {
         : `No accessible options exposed for ${field.label}. Complete it on the employer form.`,
     );
   } catch (error) {
+    if (generation !== scanGeneration) return;
     message(
       `${error.message} Complete this field on the employer form if it remains unavailable.`,
     );
   } finally {
-    $("scan").disabled = false;
+    clearTimeout(timer);
+    if (generation === scanGeneration) {
+      cancelScan();
+      updateCount();
+    }
   }
 }
 $("scan").onclick = scan;
@@ -673,6 +855,9 @@ for (const id of [
   "applied-date",
   "confirmed",
   "job-link",
+  "submission-status",
+  "receipt-excerpt",
+  "receipt-url",
 ])
   $(id).onchange = () => {
     if (!page) return;
@@ -681,6 +866,29 @@ for (const id of [
       page.originalUrl = $(id).value;
       state.jobOrigins ||= {};
       state.jobOrigins[page.tabId] = $(id).value;
+    }
+    if (id === "submission-status") {
+      page.submissionStatus = $(id).value;
+      if (page.submissionStatus === "Confirmed submitted" && !page.confirmed) {
+        page.submissionStatus = "Not confirmed";
+        $("submission-status").value = page.submissionStatus;
+        message(
+          "Confirm an employer receipt using the confirmation checkbox first.",
+        );
+      }
+      if (page.submissionStatus !== "Confirmed submitted") {
+        page.confirmed = false;
+        $("confirmed").checked = false;
+      }
+    }
+    if (id === "receipt-excerpt") page.receiptExcerpt = $(id).value;
+    if (id === "receipt-url") page.receiptUrl = $(id).value;
+    if (id === "confirmed") {
+      page.submissionStatus = page.confirmed
+        ? "Confirmed submitted"
+        : "Not confirmed";
+      page.confirmedAt = page.confirmed ? new Date().toISOString() : undefined;
+      $("submission-status").value = page.submissionStatus;
     }
     $("record").disabled = !page.confirmed;
     save();
@@ -695,6 +903,20 @@ $("record").onclick = () => {
     destination.searchParams.set("recordLink", url.href);
     for (const id of ["company", "role", "location", "applied-date"])
       destination.searchParams.set(`record-${id}`, $(id).value);
+    const source = new URL($("receipt-url").value);
+    if (
+      !["https:", "http:"].includes(source.protocol) ||
+      source.username ||
+      source.password
+    )
+      throw Error();
+    destination.hash = new URLSearchParams({
+      receipt: JSON.stringify({
+        excerpt: $("receipt-excerpt").value.slice(0, 500),
+        sourceUrl: source.href,
+        confirmedAt: page.confirmedAt || new Date().toISOString(),
+      }),
+    }).toString();
     chrome.tabs.create({ url: destination.href });
   } catch {
     message("Enter the original HTTP(S) job URL before saving.");
@@ -709,6 +931,7 @@ page = state.pages[pageKey(active || {})];
 load();
 render();
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  cancelScan();
   const tab = await chrome.tabs.get(tabId);
   rememberOriginal(tab);
   await save();
@@ -722,6 +945,9 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
     rememberOriginal(tab);
     save();
   }
+  if (tab.active && change.url) {
+    cancelScan();
+  }
   if (tabId !== page?.tabId || !change.url || change.url === page.url) return;
   page = state.pages[pageKey(tab)];
   render();
@@ -729,3 +955,42 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
     "Application page changed. Scan to refresh; previous-page progress is saved.",
   );
 });
+
+let polling = false;
+setInterval(async () => {
+  const current = page;
+  if (!current || $("scan").disabled || polling) return;
+  polling = true;
+  let timer;
+  try {
+    const results = await Promise.race([
+      chrome.scripting.executeScript({
+        target: { tabId: current.tabId, allFrames: true },
+        func: frameInfo,
+      }),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(Error("Form observation timed out")),
+          3000,
+        );
+      }),
+    ]);
+    if (page !== current) return;
+    if (
+      results.length !== current.frames.length ||
+      results.some(
+        (result) =>
+          current.progress?.find((row) => row.documentId === result.documentId)
+            ?.revision !== result.result.revision,
+      )
+    )
+      message(
+        "Form changed — rescan. Newly loaded controls or frames may now be available.",
+      );
+  } catch {
+    /* Missing access is explained by the scan diagnostics. */
+  } finally {
+    clearTimeout(timer);
+    polling = false;
+  }
+}, 4000);

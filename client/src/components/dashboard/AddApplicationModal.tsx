@@ -11,10 +11,12 @@ export default function AddApplicationModal({
   application,
   initialJobLink,
   initialDetails,
+  initialReceipt,
   onClose,
 }: {
   application?: Application | null;
   initialJobLink?: string;
+  initialReceipt?: { excerpt: string; sourceUrl: string; confirmedAt: string };
   initialDetails?: {
     company: string;
     role: string;
@@ -44,10 +46,30 @@ export default function AddApplicationModal({
     queryKey: ["resumes", api.userId],
     queryFn: () => api.get<Resume[]>("/resumes"),
   });
+  const [receipt, setReceipt] = useState(
+    initialReceipt ?? {
+      excerpt: "",
+      sourceUrl: "",
+      confirmedAt: new Date().toISOString(),
+    },
+  );
+  const [emailUpdateId, setEmailUpdateId] = useState("");
+  const [confirmedReceipt, setConfirmedReceipt] = useState(false);
   const mutation = useMutation({
     mutationFn: () => {
       const data = {
         ...form,
+        ...(confirmedReceipt
+          ? {
+              submissionEvidence: {
+                confirmed: true,
+                excerpt: receipt.excerpt,
+                confirmedAt: receipt.confirmedAt,
+                ...(receipt.sourceUrl ? { sourceUrl: receipt.sourceUrl } : {}),
+                ...(emailUpdateId ? { emailUpdateId } : {}),
+              },
+            }
+          : {}),
         resumeId: form.resumeId || null,
         appliedDate:
           application &&
@@ -160,6 +182,55 @@ export default function AddApplicationModal({
             />
           </label>
         </div>
+        <details>
+          <summary>Submission receipt (optional)</summary>
+          <p>
+            A Submit click alone is not proof. Verify an employer receipt or
+            explicit success confirmation. Saving evidence does not
+            automatically change status.
+          </p>
+          <label>
+            Receipt excerpt
+            <textarea
+              maxLength={500}
+              value={receipt.excerpt}
+              onChange={(event) =>
+                setReceipt({ ...receipt, excerpt: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Receipt source URL
+            <input
+              type="url"
+              value={receipt.sourceUrl}
+              onChange={(event) =>
+                setReceipt({ ...receipt, sourceUrl: event.target.value })
+              }
+            />
+          </label>
+          <label>
+            Careerpath email reference (optional)
+            <input
+              value={emailUpdateId}
+              onChange={(event) => setEmailUpdateId(event.target.value)}
+            />
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={confirmedReceipt}
+              onChange={(event) => {
+                setConfirmedReceipt(event.target.checked);
+                setReceipt({
+                  ...receipt,
+                  confirmedAt: new Date().toISOString(),
+                });
+              }}
+            />{" "}
+            I verified a receipt or success confirmation
+          </label>
+        </details>
         <div className="actions modal-actions">
           <button type="button" onClick={onClose}>
             Cancel

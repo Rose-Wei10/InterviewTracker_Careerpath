@@ -12,3 +12,7 @@ The queue stores sender, subject, received date and review metadata. Google gran
 4. Apply the additive Prisma migration to the preview database, then deploy the API and frontend. Verify a labeled synthetic email, an unlabeled control, a timeline entry, and the existing event form before connecting real recruiting mail.
 
 Gmail read-only is a restricted scope. Review Google's [verification exceptions](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification) before a hosted rollout and confirm eligibility for personal use before enabling it. The integration needs no AWS service or background worker.
+
+## Automatic labeling guidance
+
+Email updates includes two filter recipes: one exact recruiting sender, or that sender plus recruiting phrases. Preview the copied search in the connected Gmail account before creating a filter. Choose **Apply the label → Careerpath**; applying to existing conversations is optional. Replies must independently match the criteria. This helper does not modify Gmail settings or expand OAuth scopes. The 30-day import window and manual Sync now remain unchanged.

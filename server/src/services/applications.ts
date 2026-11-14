@@ -1,6 +1,12 @@
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "../config/prisma";
-import { applicationSchema, listSchema, updateSchema } from "../lib/validation";
+import {
+  applicationWithEvidenceSchema,
+  submissionEvidenceSchema,
+  listSchema,
+  updateSchema,
+} from "../lib/validation";
 import { HttpError } from "../lib/errors";
 import { z } from "zod";
 export function applicationWhere(
@@ -62,9 +68,56 @@ export async function listApplications(userId: string, input: unknown) {
     totalPages: Math.ceil(total / q.pageSize),
   };
 }
+async function saveEvidence(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  applicationId: string,
+  evidence?: z.infer<typeof submissionEvidenceSchema>,
+) {
+  if (!evidence) return;
+  if (
+    evidence.emailUpdateId &&
+    !(await tx.emailUpdate.findFirst({
+      where: { id: evidence.emailUpdateId, userId },
+      select: { id: true },
+    }))
+  )
+    throw new HttpError(404, "Email evidence not found");
+  const evidenceId = createHash("sha256")
+    .update(
+      JSON.stringify([
+        evidence.sourceUrl || "",
+        evidence.emailUpdateId || "",
+        evidence.excerpt,
+      ]),
+    )
+    .digest("hex");
+  await tx.$queryRaw(
+    Prisma.sql`SELECT id FROM "JobApplication" WHERE id=${applicationId} AND "userId"=${userId} FOR UPDATE`,
+  );
+  const existing = await tx.activity.findFirst({
+    where: {
+      applicationId,
+      kind: "SUBMISSION_CONFIRMED",
+      metadata: { path: ["evidenceId"], equals: evidenceId },
+    },
+    select: { id: true },
+  });
+  if (!existing)
+    await tx.activity.create({
+      data: {
+        applicationId,
+        kind: "SUBMISSION_CONFIRMED",
+        metadata: { ...evidence, evidenceId },
+      },
+    });
+}
 export async function createApplication(userId: string, input: unknown) {
-  const { followUpAt: _legacyFollowUp, ...data } =
-    applicationSchema.parse(input);
+  const {
+    followUpAt: _legacyFollowUp,
+    submissionEvidence,
+    ...data
+  } = applicationWithEvidenceSchema.parse(input);
   void _legacyFollowUp;
   await checkResume(userId, data.resumeId);
   return prisma.$transaction(async (tx) => {
@@ -73,7 +126,7 @@ export async function createApplication(userId: string, input: unknown) {
       update: {},
       create: { id: userId },
     });
-    return tx.jobApplication.create({
+    const record = await tx.jobApplication.create({
       data: {
         ...data,
         userId,
@@ -85,6 +138,8 @@ export async function createApplication(userId: string, input: unknown) {
         },
       },
     });
+    await saveEvidence(tx, userId, record.id, submissionEvidence);
+    return record;
   });
 }
 export async function updateApplication(
@@ -92,7 +147,11 @@ export async function updateApplication(
   id: string,
   input: unknown,
 ) {
-  const { followUpAt: _legacyFollowUp, ...data } = updateSchema.parse(input);
+  const {
+    followUpAt: _legacyFollowUp,
+    submissionEvidence,
+    ...data
+  } = updateSchema.parse(input);
   void _legacyFollowUp;
   await checkResume(userId, data.resumeId);
   return prisma.$transaction(async (tx) => {
@@ -119,6 +178,7 @@ export async function updateApplication(
       await tx.activity.create({
         data: { applicationId: id, kind: "NOTES_UPDATED" },
       });
+    await saveEvidence(tx, userId, record.id, submissionEvidence);
     return record;
   });
 }

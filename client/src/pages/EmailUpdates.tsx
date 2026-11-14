@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApi } from "../hooks/useApi";
 import { errorMessage } from "../services/api";
 import { invalidateUserQueries } from "../services/queryCache";
+import GmailLabelGuide from "../components/GmailLabelGuide";
 import EventForm from "../components/events/EventForm";
 import type { Application, Page, Status } from "../types";
 
@@ -205,6 +206,9 @@ export default function EmailUpdates() {
           >
             Connect Gmail
           </button>
+        )}
+        {inbox.data?.connection && (
+          <GmailLabelGuide account={inbox.data.connection.account} />
         )}
         {syncResult && <p role="status">{syncResult}</p>}
         {action.error && <p role="alert">{errorMessage(action.error)}</p>}

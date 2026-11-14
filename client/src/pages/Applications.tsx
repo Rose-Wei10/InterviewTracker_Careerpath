@@ -18,7 +18,39 @@ import AddApplicationModal from "../components/dashboard/AddApplicationModal";
 import EventForm from "../components/events/EventForm";
 import GhostReview from "../components/dashboard/GhostReview";
 import { Confirm, ErrorState, Loading } from "../components/ui";
+function receiptFromFragment() {
+  try {
+    const raw = new URLSearchParams(window.location.hash.slice(1)).get(
+      "receipt",
+    );
+    if (!raw || raw.length > 4000) return;
+    const value = JSON.parse(raw);
+    if (
+      typeof value.excerpt === "string" &&
+      value.excerpt.length <= 500 &&
+      typeof value.sourceUrl === "string" &&
+      value.sourceUrl.length <= 2000 &&
+      typeof value.confirmedAt === "string"
+    )
+      return {
+        excerpt: value.excerpt,
+        sourceUrl: value.sourceUrl,
+        confirmedAt: value.confirmedAt,
+      };
+  } catch {
+    /* Malformed handoffs are ignored; the form still works. */
+  }
+}
 export default function Applications() {
+  const [initialReceipt] = useState(receiptFromFragment);
+  useEffect(() => {
+    if (!initialReceipt) return;
+    const url = new URL(window.location.href),
+      fragment = new URLSearchParams(url.hash.slice(1));
+    fragment.delete("receipt");
+    url.hash = fragment.toString();
+    window.history.replaceState(window.history.state, "", url);
+  }, [initialReceipt]);
   const api = useApi(),
     qc = useQueryClient(),
     [params, setParams] = useSearchParams();
@@ -370,6 +402,7 @@ export default function Applications() {
         <AddApplicationModal
           application={editing}
           initialJobLink={recordLink ?? undefined}
+          initialReceipt={recordLink ? initialReceipt : undefined}
           initialDetails={
             recordLink
               ? {

@@ -38,9 +38,44 @@ export const applicationSchema = z
     resumeId: z.string().min(1).nullable().optional(),
   })
   .strict();
-export const updateSchema = applicationSchema
+export const submissionEvidenceSchema = z
+  .object({
+    confirmed: z.literal(true),
+    excerpt: z.string().trim().max(500).default(""),
+    confirmedAt: z.string().datetime({ offset: true }),
+    sourceUrl: z
+      .string()
+      .url()
+      .max(2000)
+      .refine((value) => {
+        try {
+          const url = new URL(value);
+          return (
+            ["http:", "https:"].includes(url.protocol) &&
+            !url.username &&
+            !url.password
+          );
+        } catch {
+          return false;
+        }
+      })
+      .optional(),
+    emailUpdateId: z.string().min(1).max(200).optional(),
+  })
+  .strict()
+  .refine(
+    (value) => !!value.sourceUrl || !!value.emailUpdateId,
+    "Provide a receipt URL or an owned email reference",
+  );
+export const applicationWithEvidenceSchema = applicationSchema.extend({
+  submissionEvidence: submissionEvidenceSchema.optional(),
+});
+export const updateSchema = applicationWithEvidenceSchema
   .partial()
-  .refine((v) => Object.keys(v).length > 0, "Provide at least one field");
+  .refine(
+    (value) => Object.keys(value).length > 0,
+    "Provide at least one field",
+  );
 export const listSchema = z
   .object({
     page: z.coerce.number().int().min(1).max(100000).default(1),

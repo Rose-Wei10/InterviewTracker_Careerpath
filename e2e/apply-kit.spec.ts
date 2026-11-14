@@ -156,9 +156,15 @@ test("confirmed application handoff checks the original job link before offering
   const owner = `apply-kit-${randomUUID()}`;
   await page.setExtraHTTPHeaders({ "x-browser-test-user": owner });
   const jobLink = "https://employer.example.test/jobs/123?source=listing";
+  const receipt = {
+    excerpt: "Synthetic employer confirmed receipt.",
+    sourceUrl: "https://employer.example.test/receipt",
+    confirmedAt: "2026-11-13T12:00:00Z",
+  };
   await page.goto(
-    `/applications?${new URLSearchParams({ recordLink: jobLink, "record-company": "Synthetic Employer", "record-role": "Software Engineer", "record-location": "Remote", "record-applied-date": "2026-11-11" })}`,
+    `/applications?${new URLSearchParams({ recordLink: jobLink, "record-company": "Synthetic Employer", "record-role": "Software Engineer", "record-location": "Remote", "record-applied-date": "2026-11-11" })}#${new URLSearchParams({ receipt: JSON.stringify(receipt) })}`,
   );
+  await expect(page).not.toHaveURL(/receipt=/);
   await page.getByRole("button", { name: "Add confirmed application" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByLabel("Job URL")).toHaveValue(jobLink);
@@ -166,6 +172,20 @@ test("confirmed application handoff checks the original job link before offering
   await expect(dialog.getByLabel("Role")).toHaveValue("Software Engineer");
   await expect(dialog.getByLabel("Location")).toHaveValue("Remote");
   await expect(dialog.getByLabel("Applied date")).toHaveValue("2026-11-11");
+  await dialog
+    .getByText("Submission receipt (optional)", { exact: true })
+    .click();
+  await expect(dialog.getByLabel("Receipt excerpt")).toHaveValue(
+    receipt.excerpt,
+  );
+  await expect(dialog.getByLabel("Receipt source URL")).toHaveValue(
+    receipt.sourceUrl,
+  );
+  const confirmation = dialog.getByRole("checkbox", {
+    name: "I verified a receipt or success confirmation",
+  });
+  await expect(confirmation).not.toBeChecked();
+  await confirmation.check();
   await dialog.getByRole("button", { name: "Save application" }).click();
   await expect(dialog).not.toBeVisible();
 
@@ -181,4 +201,10 @@ test("confirmed application handoff checks the original job link before offering
   ).toHaveCount(0);
   await edit.click();
   await expect(dialog.getByLabel("Job URL")).toHaveValue(jobLink);
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page
+    .getByRole("link", { name: "Synthetic Employer", exact: true })
+    .click();
+  await page.getByText("Submission evidence", { exact: true }).click();
+  await expect(page.getByText(receipt.excerpt, { exact: true })).toBeVisible();
 });

@@ -34,6 +34,11 @@
       <button id="frames" type="button" hidden>
         Allow access to embedded application</button
       ><button id="forget" type="button">Forget saved session</button>
+      <section
+        id="scan-progress"
+        aria-label="Frame scan progress"
+        aria-live="polite"
+      ></section>
       <section id="fields" aria-label="Field suggestions"></section>
       <section id="checklist" class="card" hidden></section>
       <details id="track" class="card" hidden>
@@ -46,8 +51,23 @@
           Clicking Submit is only an attempt. Save after a receipt or
           confirmation.
         </p>
+        <label
+          >Submission status<select id="submission-status">
+            <option>Not confirmed</option>
+            <option>Submission in progress</option>
+            <option>Confirmed submitted</option>
+            <option>Failed / unknown</option>
+          </select></label
+        >
+        <label
+          >Receipt excerpt (up to 500 characters)<textarea
+            id="receipt-excerpt"
+            maxlength="500"
+          ></textarea>
+        </label>
+        <label>Receipt source URL<input id="receipt-url" type="url" /></label>
         <label for="job-link">Original job link</label>
-        <input id="job-link" type="url" />
+        <input id="job-link" type="url" /><p id="origin-help"></p>
         <label
           ><input id="confirmed" type="checkbox" /> The employer confirmed
           submission</label
