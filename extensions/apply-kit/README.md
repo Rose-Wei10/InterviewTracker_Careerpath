@@ -4,7 +4,7 @@ Load this folder with **Load unpacked** on `chrome://extensions` (Chrome 116+). 
 
 Copy autofill data from Careerpath’s Apply Kit, paste it into the panel, then **Scan / retry** on the employer tab. Scan, bulk selection, counts and Fill selected remain visible while the suggestions scroll.
 
-- **Ready to fill:** a clear saved-answer match and, for choice controls, one exact available option. Select individually or use **Select all ready fields**.
+- **Ready to fill:** a clear saved-answer match and, for choice controls, one exact available option. Select individually or use **Select all clear matches**.
 - **Needs review:** missing/ambiguous answers, closed menus without exposed options, demographics, consent, conflicts and eligibility. Review the proposed value, source and exact option. Demographics always require individual selection; no answer is inferred from other profile details.
 - **Completed:** a value was read back and validated. Existing values are preserved. Failed writes stay in review with a rescan/retry action.
 
@@ -52,3 +52,9 @@ Testing resumed with explicit authorization. v2.2 passes lint, client/server typ
 `fixtures/recovery.html` is a reviewable synthetic preview source with an open shadow input, delayed location menu, date, employer-defined seasons, duplicate employment fragments and a delayed iframe. It has no employer endpoint or working submission action. It is exercised by the isolated real-Chrome journey, including shadow inputs, delayed menus, native dates, season review, employment warnings, dynamic-frame detection and receipt handoff. Use a local HTTP origin for manual previews; file URLs are outside the extension’s default scope.
 
 Availability dates are not automatically suggested for parsed employment start/end dates. Review those dates for the particular job entry, or explicitly provide an application-only answer.
+
+### Usability update (v2.3)
+
+Clear, uniquely matched ordinary profile fields are preselected; sensitive answers, dates and employer-specific answers still require review. The panel explains disabled Fill actions and rescans same-origin form changes after an initial scan, without filling automatically. Submission receipt candidates still require explicit confirmation and duplicate checking. Application table values use bounded two-line previews with keyboard-accessible full-text expansion.
+
+Gmail requires all four server settings in Production and the exact hosted `/email-updates` OAuth callback; redeploy after environment changes. No new service or permission is required. Live ATS compatibility is not implied by synthetic checks.

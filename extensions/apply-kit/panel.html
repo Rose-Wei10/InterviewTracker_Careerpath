@@ -41,6 +41,7 @@
       ></section>
       <section id="fields" aria-label="Field suggestions"></section>
       <section id="checklist" class="card" hidden></section>
+      <p id="receipt-candidate" role="status" hidden></p>
       <details id="track" class="card" hidden>
         <summary>Record an application after submission</summary>
         <label>Company<input id="company" /></label
@@ -67,7 +68,8 @@
         </label>
         <label>Receipt source URL<input id="receipt-url" type="url" /></label>
         <label for="job-link">Original job link</label>
-        <input id="job-link" type="url" /><p id="origin-help"></p>
+        <input id="job-link" type="url" />
+        <p id="origin-help"></p>
         <label
           ><input id="confirmed" type="checkbox" /> The employer confirmed
           submission</label
@@ -80,7 +82,8 @@
     <footer>
       <div class="bar">
         <button id="scan" type="button">Scan / retry</button
-        ><button id="select-ready" type="button">Select all ready fields</button
+        ><button id="select-ready" type="button">
+          Select all clear matches</button
         ><button id="clear" type="button">Clear selection</button>
       </div>
       <div class="bar">

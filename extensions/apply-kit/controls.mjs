@@ -109,7 +109,7 @@ export async function formControls(approved = null, inspect = null) {
       (el.type !== "button" ||
         el.matches("[role=combobox],[aria-haspopup=listbox]")),
   );
-  const groups = new Set();
+  const groups = new Map();
   const descriptors = [];
   const nodes = [];
   for (const el of inputs) {
@@ -138,15 +138,18 @@ export async function formControls(approved = null, inspect = null) {
     let question = label(el);
     if (kind === "radio" || kind === "checkbox") {
       const parent = el.closest("fieldset,[role=radiogroup],[role=group]");
-      const key = parent || (el.name ? `${kind}:${el.name}` : el);
-      if (groups.has(key)) continue;
-      groups.add(key);
+      const anchor = parent || el.getRootNode();
+      const key = kind === "radio" ? el.name || el : parent || el.name || el;
+      if (!groups.has(anchor)) groups.set(anchor, new Set());
+      if (groups.get(anchor).has(key)) continue;
+      groups.get(anchor).add(key);
       members = inputs.filter(
         (other) =>
           other.type === kind &&
           (parent
             ? other.closest("fieldset,[role=radiogroup],[role=group]") ===
-              parent
+                parent &&
+              (kind !== "radio" || other.name === el.name)
             : el.name
               ? other.name === el.name
               : other === el),
@@ -162,13 +165,32 @@ export async function formControls(approved = null, inspect = null) {
         (parent ? label(parent) : question);
     }
     if (!question) continue;
-    const manualReason =
-      /\b(consent|agree|acknowledg|certif|privacy (?:statement|notice)|terms(?: of| and conditions)?|nondisclosure|code of conduct|nda|signature)/i.test(
-        [question, ...members.map((member) => label(member)), el.name, el.id]
-          .join(" ")
-          .replace(/([a-z])([A-Z])/g, "$1 $2")
-          .replace(/[_-]/g, " "),
-      )
+    const mixedQuestions =
+      kind === "radio" &&
+      !!el.closest("fieldset") &&
+      new Set(
+        inputs
+          .filter(
+            (other) =>
+              other.type === "radio" &&
+              other.closest("fieldset") === el.closest("fieldset"),
+          )
+          .map((other) => other.name),
+      ).size > 1 &&
+      !el.closest("[role=radiogroup]");
+    const manualReason = mixedQuestions
+      ? "Several radio questions share this fieldset. Review each question directly on the form."
+      : /\b(consent|agree|acknowledg|certif|privacy (?:statement|notice)|terms(?: of| and conditions)?|nondisclosure|code of conduct|nda|signature)/i.test(
+            [
+              question,
+              ...members.map((member) => label(member)),
+              el.name,
+              el.id,
+            ]
+              .join(" ")
+              .replace(/([a-z])([A-Z])/g, "$1 $2")
+              .replace(/[_-]/g, " "),
+          )
         ? "Legal acknowledgment: complete directly on the employer form."
         : el.type !== "date" &&
             (el.matches("[role=spinbutton]") ||

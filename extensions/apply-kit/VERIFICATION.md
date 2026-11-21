@@ -28,3 +28,7 @@ The extension browser check adds local HTTP host access only to a temporary test
 A selected filename does not prove upload-server acceptance. Verify the employer’s preview/errors. Closed shadow roots, native-accessibility-only widgets and multiple checkbox answers remain manual. Seasonal graduation mappings require explicit employer month definitions and matching years; no graduation or eligibility date is invented. Completed means the last successful read-back, not a submission receipt.
 
 Original links can be retained only if observed or explicitly provided; URL variants can still evade exact-link duplicate lookup. Receipt excerpts are user-confirmed text, not cryptographically verified employer receipts. Hosted CI/deployment status is checked separately after pushing and is not implied by local success.
+
+## v2.3 synthetic verification — November 20, 2026
+
+Lint, both typechecks, builds, 68 unit/component tests, 30 disposable-database integration tests and 18 browser journeys passed. The isolated unpacked-extension journey passed at compact and wide panel sizes and in dark mode. Application overflow and keyboard expansion passed at 390, 768 and 1440 pixels in both themes. These are synthetic results; live ATS filling and hosted Gmail consent/sync remain unverified.

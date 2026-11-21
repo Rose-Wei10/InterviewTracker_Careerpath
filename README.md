@@ -32,7 +32,7 @@ The Chrome extension runs locally with rule-based matching. It needs no paid AI,
 1. Open `chrome://extensions` in **Chrome 116+**, enable **Developer mode**, choose **Load unpacked**, and select `extensions/apply-kit`. For an existing installation, click **Reload** after updating the files.
 2. In Careerpath’s **Apply Kit**, save your answers and click **Copy autofill data**. On the employer tab, click the extension icon → **Open side panel**, then paste the export. Resize the panel with Chrome’s divider.
 3. Click **Scan / retry**. Review the application question, proposed answer, saved-answer source and exact choice. Scan, selection counts and fill controls remain visible while results scroll.
-4. Select individual fields or **Select all ready fields**, then **Fill selected**. Review the read-back results. Existing values and manually edited fields are preserved; rescan after navigation or form changes.
+4. Select individual fields or **Select all clear matches**, then **Fill selected**. Review the read-back results. Existing values and manually edited fields are preserved; rescan after navigation or form changes.
 5. Upload your résumé and submit directly on the employer’s form. Only after an employer receipt or confirmation, use the panel’s application-record section to hand company, role, location, date and original job URL to Careerpath’s duplicate-check/add/edit flow. Review and save the record there.
 
 | Group | What it means |
@@ -234,3 +234,11 @@ Docker targets for frontend/API, a separate worker process, local Compose and CI
 - Implemented interview scheduling, structured activity history and a PostgreSQL-backed reminder worker with concurrent job claims, retry backoff and duplicate-delivery safeguards; added API, component and Playwright tests plus CI/container build configuration.
 
 Original project by Rose Wei. See [audit](docs/AUDIT.md), [progress checklist](docs/PROGRESS.md), [security notes](docs/SECURITY.md) and [walkthrough](docs/WALKTHROUGH.md).
+
+### Usability update (v2.3)
+
+Clear, uniquely matched ordinary profile fields are preselected; sensitive answers, dates and employer-specific answers still require review. The panel explains disabled Fill actions and rescans same-origin form changes after an initial scan, without filling automatically. Submission receipt candidates still require explicit confirmation and duplicate checking. Application table values use bounded two-line previews with keyboard-accessible full-text expansion.
+
+Gmail requires all four server settings in Production and the exact hosted `/email-updates` OAuth callback; redeploy after environment changes. No new service or permission is required. Live ATS compatibility is not implied by synthetic checks.
+
+![Bounded application rows with expandable two-line values](docs/screenshots/applications-long-text.png)

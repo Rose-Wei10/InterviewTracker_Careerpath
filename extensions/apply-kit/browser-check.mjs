@@ -114,7 +114,7 @@ try {
   await restored.getByText("Ready to fill (3)", { exact: true }).waitFor();
   assert.equal(
     await restored.locator("#count").textContent(),
-    "0 fields will be filled",
+    "3 fields will be filled",
   );
   // Exercise the recovery-specific controls in the real unpacked extension.
   await employer.goto(`http://127.0.0.1:${server.address().port}/recovery`);
@@ -167,8 +167,18 @@ try {
   await restored.locator("#select-ready").click();
   assert.equal(
     await restored.locator("#count").textContent(),
-    "4 fields will be filled",
+    "2 fields will be filled",
   );
+  await restored
+    .locator("article")
+    .filter({ has: restored.getByText("School location", { exact: true }) })
+    .locator("input[type=checkbox]")
+    .check();
+  await restored
+    .locator("article")
+    .filter({ hasText: "Source: Apply Kit → Start date" })
+    .locator("input[type=checkbox]")
+    .check();
   await restored.locator("#fill").click();
   await restored.getByText(/Fill finished/).waitFor();
   assert.equal(
@@ -194,10 +204,9 @@ try {
   assert.equal(await employer.locator("select").inputValue(), "");
   await employer.locator("#load-frame").click();
   await restored
-    .locator("#status")
-    .filter({ hasText: "Form changed" })
-    .waitFor({ timeout: 10000 });
-  await restored.locator("#scan").click();
+    .locator("#diagnostics")
+    .filter({ hasText: "2 accessible documents" })
+    .waitFor({ timeout: 12000 });
   await restored.getByText(/Scan complete|Partial scan finished/).waitFor();
   assert.equal(await restored.locator("#scan").isEnabled(), true);
   await restored.locator("#track > summary").click();

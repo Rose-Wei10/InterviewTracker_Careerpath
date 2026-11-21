@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { JSDOM } from "jsdom";
 import { test, expect, vi, afterEach } from "vitest";
 import { formControls } from "./controls.mjs";
-import { optionMatch, suggestions, needsReview } from "./match.mjs";
+import {
+  clearProfileMatch,
+  optionMatch,
+  suggestions,
+  needsReview,
+} from "./match.mjs";
 afterEach(() => vi.unstubAllGlobals());
 function fixture(html) {
   const { window } = new JSDOM(html);
@@ -265,7 +270,7 @@ test("side panel imports, previews, keeps manual reminders separate and restores
     "https://www.linkedin.com/jobs/view/123456/",
   );
   $("checklist").querySelector("input").click();
-  expect($("count").textContent).toContain("0 fields");
+  expect($("count").textContent).toContain("1 fields");
   const override = $("fields").querySelector(
     '[aria-label="Application-only answer for Race"]',
   );
@@ -513,4 +518,49 @@ test("availability start dates are not suggested for parsed employment history d
     ),
   ).toEqual({ choices: [], suggested: null });
   expect(suggestions({ label: "Start date" }, entries).suggested).toBe(0);
+});
+
+test("safe preselection only includes clear ordinary profile fields", () => {
+  const first = {
+    starterKey: "first-name",
+    prompt: "Legal first name",
+    answer: "Alex",
+    review: false,
+  };
+  expect(clearProfileMatch({ label: "First name", kind: "text" }, first)).toBe(
+    true,
+  );
+  for (const field of [
+    { label: "First name", context: "Employment referee" },
+    { label: "First name", demographic: true },
+    { label: "First name", manualReason: "Legal" },
+    { label: "First name", inputType: "date" },
+  ])
+    expect(clearProfileMatch(field, first)).toBe(false);
+  expect(
+    clearProfileMatch(
+      { label: "Salary" },
+      { starterKey: "salary", prompt: "Salary", review: false },
+    ),
+  ).toBe(false);
+  expect(
+    suggestions({ label: "Describe a challenge", context: "Education" }, [
+      {
+        starterKey: null,
+        prompt: "Describe a challenge at your previous employer",
+        answer: "Synthetic",
+        review: false,
+      },
+    ]).suggested,
+  ).toBeNull();
+});
+
+test("radio questions sharing a fieldset cannot collapse into one Yes/No group", async () => {
+  const w = fixture(
+    '<fieldset><legend>Eligibility questions</legend><label>Yes<input type="radio" name="authorization"></label><label>No<input type="radio" name="authorization"></label><label>Yes<input type="radio" name="sponsorship"></label><label>No<input type="radio" name="sponsorship"></label></fieldset>',
+  );
+  const scan = await formControls();
+  expect(scan.fields).toHaveLength(2);
+  expect(scan.fields.every((field) => field.manualReason)).toBe(true);
+  w.close();
 });

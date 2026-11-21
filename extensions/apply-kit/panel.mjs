@@ -7,6 +7,7 @@ import {
   optionMatch,
   isDialingCode,
   graduationSeason,
+  clearProfileMatch,
 } from "./match.mjs";
 const $ = (id) => document.getElementById(id);
 let state = {
@@ -40,9 +41,21 @@ function updateCount() {
   $("manual-count").textContent =
     `${$("checklist").querySelectorAll("input:checked").length} manual reminders checked`;
   $("fill").disabled = !selected.length || $("scan").disabled;
-  $("fill-help").textContent = selected.length
-    ? "Only these approved fields will be changed."
-    : "Select an autofill suggestion. Manual reminders do not select fields.";
+  $("fill-help").textContent = !state.entries.length
+    ? "Load your Apply Kit data first."
+    : $("scan").disabled
+      ? "Scan or fill in progress. Wait for results."
+      : !page
+        ? "Scan this application first."
+        : !page.fields.length
+          ? "No supported fields detected. Check frame access or complete the form manually."
+          : !rows.length && page.fields.every((field) => field.filled)
+            ? "All detected fields already have values. Existing answers are preserved."
+            : !rows.some((row) => !row.check.disabled)
+              ? "No committed matching options are available. Retry affected fields or complete them on the form."
+              : !selected.length
+                ? "Select an approved answer. Manual reminders never count as autofill selections."
+                : `${selected.length} approved fields will be filled. Review before continuing.`;
 }
 function load() {
   $("loaded").hidden = !state.entries.length;
@@ -87,6 +100,7 @@ function render() {
     $("diagnostics").textContent = state.entries.length
       ? "No tab scanned yet."
       : "Autofill data not loaded. No tab scanned yet.";
+    $("receipt-candidate").hidden = true;
     $("track").hidden = true;
     $("checklist").hidden = true;
     $("frames").hidden = true;
@@ -152,6 +166,15 @@ function render() {
     }
     section.append(card);
     text("strong", field.label, card);
+    text(
+      "p",
+      completed
+        ? "Filled and verified"
+        : result && !result.ok
+          ? "Failed"
+          : "Needs review",
+      card,
+    );
     if (field.guidance) text("p", field.guidance, card);
     if (completed) {
       text(
@@ -363,7 +386,11 @@ function render() {
       copy.disabled = !e;
       updateCount();
     };
-    check.checked = !!page.selected?.[key];
+    check.checked = Object.hasOwn(page.selected || {}, key)
+      ? !!page.selected[key]
+      : ready && clearProfileMatch(field, entry);
+    page.selected ||= {};
+    page.selected[key] = check.checked;
     check.onchange = () => {
       page.selected ||= {};
       page.selected[key] = check.checked;
@@ -375,7 +402,12 @@ function render() {
       check,
       key,
       get ready() {
-        return ready && selected === suggested && !page.overrides?.[key];
+        return (
+          ready &&
+          selected === suggested &&
+          !page.overrides?.[key] &&
+          clearProfileMatch(field, state.entries[selected])
+        );
       },
       get value() {
         return (page.overrides?.[key] || state.entries[selected])?.answer;
@@ -493,9 +525,46 @@ function render() {
   $("record").disabled = !page.confirmed;
   updateCount();
 }
+let autoSession, autoTimer;
 let scanGeneration = 0,
   scanningTab,
   scanningRun;
+function scheduleRescan() {
+  clearTimeout(autoTimer);
+  if (!autoSession?.enabled) return;
+  autoTimer = setTimeout(async () => {
+    if ($("scan").disabled || !autoSession?.enabled) return;
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (
+      tab?.id !== autoSession.tabId ||
+      new URL(tab.url).origin !== autoSession.origin
+    )
+      return;
+    await scan({ automatic: true });
+  }, 1000);
+}
+function inspectReceipt(observations, current) {
+  const candidate = observations.find(
+    (item) =>
+      item.receiptCandidate &&
+      (current.submissionStatus === "Submission in progress" ||
+        (autoSession?.hadFields &&
+          observations.every((frame) => !frame.visibleFieldCount))),
+  );
+  if (!candidate || current.confirmed) return;
+  current.receiptExcerpt ||= candidate.receiptCandidate;
+  current.receiptUrl ||= candidate.url;
+  $("receipt-excerpt").value = current.receiptExcerpt;
+  $("receipt-url").value = current.receiptUrl;
+  $("receipt-candidate").hidden = false;
+  $("receipt-candidate").textContent =
+    "Possible employer receipt detected. Review the excerpt and explicitly confirm it before recording.";
+  $("track").open = true;
+  save();
+}
 function cancelScan() {
   scanGeneration++;
   if (scanningTab)
@@ -519,7 +588,7 @@ function renderProgress(progress) {
     );
 }
 
-async function scan() {
+async function scan({ automatic = false } = {}) {
   cancelScan();
   const generation = scanGeneration;
   scanningRun = crypto.randomUUID();
@@ -548,6 +617,13 @@ async function scan() {
     if (!tab?.id || !/^https?:/.test(tab.url || ""))
       throw Error("Open an employer application tab first.");
     scanningTab = tab.id;
+    if (!automatic)
+      autoSession = {
+        tabId: tab.id,
+        origin: new URL(tab.url).origin,
+        enabled: true,
+        hadFields: false,
+      };
     const { results, progress } = await scanFrames(chrome, {
       tabId: tab.id,
       func: formControls,
@@ -600,6 +676,16 @@ async function scan() {
     };
     // Review selection is never carried into a new document or changed question.
     state.pages[key] = page;
+    if (autoSession) {
+      autoSession.hadFields ||= page.fields.length > 0;
+      if (
+        progress.some(
+          (frame) =>
+            frame.state === "timed out" || frame.state === "inaccessible",
+        )
+      )
+        autoSession.enabled = false;
+    }
     frameOrigins = [
       ...new Set(
         page.embeds.flatMap((url) => {
@@ -624,6 +710,7 @@ async function scan() {
     );
   } catch (error) {
     if (generation !== scanGeneration) return;
+    if (autoSession) autoSession.enabled = false;
     message(
       `${error.message} Click the extension icon on this tab to grant temporary access, then try again.`,
     );
@@ -932,6 +1019,7 @@ load();
 render();
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   cancelScan();
+  clearTimeout(autoTimer);
   const tab = await chrome.tabs.get(tabId);
   rememberOriginal(tab);
   await save();
@@ -947,6 +1035,12 @@ chrome.tabs.onUpdated.addListener((tabId, change, tab) => {
   }
   if (tab.active && change.url) {
     cancelScan();
+    if (
+      autoSession?.tabId === tabId &&
+      new URL(change.url).origin === autoSession.origin
+    )
+      scheduleRescan();
+    else if (autoSession) autoSession.enabled = false;
   }
   if (tabId !== page?.tabId || !change.url || change.url === page.url) return;
   page = state.pages[pageKey(tab)];
@@ -976,18 +1070,27 @@ setInterval(async () => {
       }),
     ]);
     if (page !== current) return;
-    if (
+    inspectReceipt(
+      results.map((result) => result.result),
+      current,
+    );
+    const changed =
       results.length !== current.frames.length ||
       results.some(
         (result) =>
           current.progress?.find((row) => row.documentId === result.documentId)
-            ?.revision !== result.result.revision,
-      )
-    )
-      message(
-        "Form changed — rescan. Newly loaded controls or frames may now be available.",
+            ?.fieldSignature !== result.result.fieldSignature,
       );
+    if (changed) {
+      message(
+        autoSession?.enabled
+          ? "Application step changed — rescanning…"
+          : "Form changed — rescan. Automatic scanning is paused after a failure or access change.",
+      );
+      scheduleRescan();
+    }
   } catch {
+    if (autoSession) autoSession.enabled = false;
     /* Missing access is explained by the scan diagnostics. */
   } finally {
     clearTimeout(timer);

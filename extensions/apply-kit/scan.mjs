@@ -24,7 +24,42 @@ export function frameInfo() {
       childList: true,
       subtree: true,
     });
+  const fields = roots.flatMap((root) => [
+    ...root.querySelectorAll("input,select,textarea,[role=combobox]"),
+  ]);
+  const visibleFields = fields.filter(
+    (el) =>
+      el.getClientRects().length &&
+      !el.closest("header,nav,[hidden],[aria-hidden=true]") &&
+      !/^(hidden|submit|button|reset)$/.test(el.type),
+  );
+  const receipt = roots
+    .flatMap((root) => [
+      ...root.querySelectorAll("h1,h2,p,[role=status],[role=alert]"),
+    ])
+    .find(
+      (el) =>
+        el.getClientRects().length &&
+        el.textContent.trim().length <= 800 &&
+        /(?:your application (?:has been |was |is )?(?:successfully )?(?:submitted|received)|thank you for applying|application submitted successfully|successfully applied)/i.test(
+          el.textContent,
+        ),
+    );
   return {
+    fieldSignature: JSON.stringify(
+      fields.map((el) => [
+        el.tagName,
+        el.type,
+        el.id,
+        el.name,
+        el.getAttribute("aria-label"),
+        [...(el.labels || [])]
+          .map((label) => label.textContent.slice(0, 180))
+          .join(" "),
+      ]),
+    ),
+    visibleFieldCount: visibleFields.length,
+    receiptCandidate: receipt?.textContent.trim().slice(0, 500) || "",
     url: location.href,
     revision: globalThis.careerpathFormRevision,
     embeds: roots
@@ -105,6 +140,8 @@ export async function scanFrames(
         documentId: frame.documentId,
         url: frame.result.url,
         state: "waiting",
+        fieldSignature: frame.result.fieldSignature,
+        visibleFieldCount: frame.result.visibleFieldCount,
       });
     const accessible = new Set(frames.map((frame) => frame.result.url));
     for (const url of new Set(frames.flatMap((frame) => frame.result.embeds)))

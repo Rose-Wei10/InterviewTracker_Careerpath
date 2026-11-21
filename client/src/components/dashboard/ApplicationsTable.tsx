@@ -1,7 +1,47 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Pencil, Trash2, CalendarPlus } from "lucide-react";
 import { statuses } from "../../types";
 import type { Application, Status } from "../../types";
+function TableText({ value, label }: { value: string; label: string }) {
+  const ref = useRef<HTMLSpanElement>(null),
+    [expanded, setExpanded] = useState(false),
+    [clipped, setClipped] = useState(false);
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (ref.current && !expanded)
+        setClipped(
+          ref.current.scrollHeight > ref.current.clientHeight + 1 ||
+            ref.current.scrollWidth > ref.current.clientWidth + 1,
+        );
+    };
+    const observer = new ResizeObserver(measure);
+    if (ref.current) observer.observe(ref.current);
+    measure();
+    return () => observer.disconnect();
+  }, [value, expanded]);
+  return (
+    <div className="table-text">
+      <span
+        ref={ref}
+        className={expanded ? "table-text-full" : "table-text-preview"}
+      >
+        {value}
+      </span>
+      {clipped && (
+        <button
+          type="button"
+          className="table-text-toggle"
+          aria-label={`${expanded ? "Hide" : "Show"} full ${label}`}
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Show less" : "Show full text"}
+        </button>
+      )}
+    </div>
+  );
+}
 export default function ApplicationsTable({
   applications,
   onEdit,
@@ -38,9 +78,14 @@ export default function ApplicationsTable({
                   <Link className="company-link" to={`/applications/${a.id}`}>
                     {a.company}
                   </Link>
-                  <p>{a.role}</p>
+                  <TableText value={a.role} label={`role for ${a.company}`} />
                 </td>
-                <td data-label="Location">{a.location || "—"}</td>
+                <td data-label="Location">
+                  <TableText
+                    value={a.location || "—"}
+                    label={`location for ${a.company}`}
+                  />
+                </td>
                 <td data-label="Applied">
                   {new Date(
                     a.appliedDate.slice(0, 10) + "T12:00:00",
@@ -74,7 +119,12 @@ export default function ApplicationsTable({
                     </span>
                   )}
                 </td>
-                <td data-label="Salary">{a.salary || "—"}</td>
+                <td data-label="Salary">
+                  <TableText
+                    value={a.salary || "—"}
+                    label={`salary for ${a.company}`}
+                  />
+                </td>
                 <td data-label="Actions">
                   <div className="actions">
                     {onSchedule && (

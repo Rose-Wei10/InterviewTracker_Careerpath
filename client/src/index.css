@@ -2566,3 +2566,72 @@ dialog input[type="file"] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* Keep application content from dictating column widths. */
+.application-table {
+  table-layout: fixed;
+  white-space: normal;
+}
+.application-table th:nth-child(1) {
+  width: 28%;
+}
+.application-table th:nth-child(2) {
+  width: 16%;
+}
+.application-table th:nth-child(3) {
+  width: 13%;
+}
+.application-table th:nth-child(4) {
+  width: 15%;
+}
+.application-table th:nth-child(5) {
+  width: 15%;
+}
+.application-table th:nth-child(6) {
+  width: 13%;
+}
+.application-table td {
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.application-table .company-link,
+.table-text-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.table-text-full {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.application-table .table-text-toggle {
+  padding: 2px 0;
+  margin-top: 4px;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font-size: 11px;
+  text-decoration: underline;
+  box-shadow: none;
+}
+.application-table td:first-child .table-text {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 4px;
+}
+.application-table .status-control {
+  min-width: 0;
+}
+.application-table select {
+  max-width: 100%;
+}
+.application-table td:last-child .actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .application-table {
+    table-layout: auto;
+  }
+}

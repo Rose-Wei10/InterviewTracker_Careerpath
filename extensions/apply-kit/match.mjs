@@ -77,6 +77,72 @@ export function isDialingCode(field) {
   );
 }
 
+const profileKeys = new Set([
+  "first-name",
+  "last-name",
+  "preferred-name",
+  "email",
+  "phone",
+  "phone-country-code",
+  "city",
+  "country",
+  "region",
+  "postal",
+  "github",
+  "linkedin",
+  "portfolio",
+]);
+export function answerContext(value) {
+  if (value.starterKey && profileKeys.has(value.starterKey)) return "profile";
+  const text = `${value.label || value.prompt || ""} ${value.context || ""}`;
+  if (
+    value.autocomplete &&
+    /^(given-name|family-name|nickname|email|tel|tel-country-code|postal-code|address-level[12]|country-name)$/.test(
+      value.autocomplete,
+    ) &&
+    !/school|education|employment|project|employer/i.test(value.context || "")
+  )
+    return "profile";
+  if (
+    /\b(why.*(?:company|role|join|work here)|this company|our company|employer specific)\b/i.test(
+      text,
+    )
+  )
+    return "employer";
+  if (
+    /\b(employment|work history|work experience|previous employer|recent employer|job title|current role)\b/i.test(
+      text,
+    )
+  )
+    return "employment";
+  if (/\b(project|projects|demo|technical tradeoff)\b/i.test(text))
+    return "projects";
+  if (
+    /\b(education|school|college|university|degree|major|graduation|gpa)\b/i.test(
+      text,
+    )
+  )
+    return "education";
+  if (
+    /\b(first name|last name|given name|family name|surname|preferred name|email|phone|mobile|linkedin|github|portfolio|website|city|postal|zip|country|state|province)\b/i.test(
+      text,
+    )
+  )
+    return "profile";
+  return "unknown";
+}
+export function clearProfileMatch(field, entry) {
+  return (
+    !!entry &&
+    profileKeys.has(entry.starterKey) &&
+    answerContext(field) === "profile" &&
+    !entry.review &&
+    !field.manualReason &&
+    !field.demographic &&
+    field.inputType !== "date" &&
+    !needsReview(field, entry)
+  );
+}
 export function suggestions(field, entries) {
   const label = normalize(field.label);
   if (
@@ -135,6 +201,8 @@ export function suggestions(field, entries) {
     names.includes(label),
   )?.[0];
   if (exactKey) {
+    if (!["unknown", "profile"].includes(answerContext(field)))
+      return { choices: [], suggested: null };
     const choices = entries.flatMap((entry, index) =>
       entry.starterKey === exactKey ? [index] : [],
     );
@@ -143,6 +211,10 @@ export function suggestions(field, entries) {
   const bareLocation = label === "location";
   const ranks = entries
     .map((entry, index) => {
+      const target = answerContext(field),
+        source = answerContext(entry);
+      if (target !== "unknown" && source !== "unknown" && target !== source)
+        return { index, score: 0 };
       if (bareLocation)
         return {
           index,
@@ -171,6 +243,8 @@ export function suggestions(field, entries) {
     choices: ranks.map(({ index }) => index),
     suggested:
       !bareLocation &&
+      (answerContext(field) !== "unknown" ||
+        (ranks[0] && answerContext(entries[ranks[0].index]) === "unknown")) &&
       ranks.length &&
       (!ranks[1] || ranks[0].score - ranks[1].score >= 0.15)
         ? ranks[0].index
